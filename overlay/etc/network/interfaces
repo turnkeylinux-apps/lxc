@@ -10,3 +10,13 @@ iface br0 inet dhcp
     bridge_fd 0
     bridge_maxwait 0
 
+auto natbr0
+iface natbr0 inet static
+    bridge_fd 0
+    bridge_maxwait 0
+    address 192.168.121.1
+    netmask 255.255.255.0
+    pre-up brctl addbr natbr0
+    post-up /etc/init.d/dnsmasq restart
+    post-down brctl delbr natbr0
+

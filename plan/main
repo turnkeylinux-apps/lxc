@@ -1,5 +1,7 @@
 #include <turnkey/base>
 
 lxc
+dnsmasq
+dnsmasq-utils
 bridge-utils
 

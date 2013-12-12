@@ -9,3 +9,10 @@ if [ "$IFACE" = "br0" ]; then
     iptables_add POSTROUTING -t nat -o br0 -j MASQUERADE
 fi
 
+if [ "$IFACE" = "natbr0" ]; then
+    CIDR=192.168.121.1/24
+    iptables_add FORWARD -i natbr0 -s $CIDR -j ACCEPT
+    iptables_add POSTROUTING -t nat -s $CIDR -j MASQUERADE
+    iptables_add POSTROUTING -t mangle -p udp --dport bootpc -s $CIDR -j CHECKSUM --checksum-fill
+fi
+
