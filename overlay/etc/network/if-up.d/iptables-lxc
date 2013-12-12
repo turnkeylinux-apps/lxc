@@ -1,0 +1,11 @@
+#!/bin/bash
+
+iptables_add() {
+    args=$@
+    if ! iptables -C $args >/dev/null 2>&1; then iptables -A $args; fi
+}
+
+if [ "$IFACE" = "br0" ]; then
+    iptables_add POSTROUTING -t nat -o br0 -j MASQUERADE
+fi
+
