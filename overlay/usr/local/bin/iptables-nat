@@ -1,0 +1,79 @@
+#!/bin/bash -e
+# Copyright (c) Alon Swartz <alon@turnkeylinux.org>
+
+fatal() { echo "FATAL [$(basename $0)]: $@" 1>&2; exit 1; }
+
+usage() {
+cat<<EOF
+Syntax: $(basename $0) action s_port d_addr:d_port
+Add or delete iptables nat configurations
+
+Arguments::
+
+    action          action to perform (add|del|info)
+    s_port          source port on host
+    d_addr:d_port   destination ip address and port
+
+Examples::
+
+    $(basename $0) add 2222 192.168.121.150:22
+    $(basename $0) del 2222 192.168.121.150:22
+
+EOF
+exit 1
+}
+
+_prerouting() {
+    action=$1
+    s_port=$2
+    d_addr=$3
+    d_port=$4
+    iptables -t nat $action PREROUTING \
+        -p tcp --dport $s_port -j DNAT --to $d_addr:$d_port
+}
+
+_forward() {
+    action=$1
+    d_addr=$2
+    d_port=$3
+    iptables $action FORWARD \
+        -d $d_addr/32 -p tcp -m state --state NEW -m tcp --dport $d_port -j ACCEPT
+}
+
+if [ "$1" == "info" ]; then
+    iptables -t nat -L PREROUTING; echo
+    iptables -L FORWARD; echo
+
+    LEASES=/var/lib/misc/dnsmasq.leases
+    if [ -e $LEASES ]; then
+        echo $LEASES
+        cat $LEASES
+    fi
+
+    exit 0
+fi
+
+if [[ "$#" != "3" ]]; then
+    usage
+fi
+
+action=$1
+s_port=$2
+d_addr=$(echo $3 | cut -d ":" -f 1)
+d_port=$(echo $3 | cut -d ":" -f 2)
+
+case $action in
+    add)
+            _prerouting -A $s_port $d_addr $d_port;
+            _forward -I $d_addr $d_port;
+            ;;
+
+    del)
+            _prerouting -D $s_port $d_addr $d_port;
+            _forward -D $d_addr $d_port;
+            ;;
+
+    *)      fatal "action not supported: $action";
+            ;;
+esac
+
