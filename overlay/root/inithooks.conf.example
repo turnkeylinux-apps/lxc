@@ -1,0 +1,12 @@
+# documentation: http://www.turnkeylinux.org/docs/inithooks
+
+MASTERPASS=turnkey
+
+export ROOT_PASS=$MASTERPASS
+export DB_PASS=$MASTERPASS
+export APP_PASS=$MASTERPASS
+export APP_EMAIL=admin@example.com
+export APP_DOMAIN=DEFAULT
+export HUB_APIKEY=SKIP
+export SEC_UPDATES=FORCE
+

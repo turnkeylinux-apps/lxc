@@ -1,0 +1,264 @@
+#!/bin/bash -e
+# Copyright (c) Alon Swartz <alon@turnkeylinux.org>
+
+info() { echo "INFO [$(basename $0)]: $@"; }
+fatal() { echo "FATAL [$(basename $0)]: $@" 1>&2; exit 1; }
+
+get_image_name() {
+    app_name=$1
+    app_version=$2
+    app_arch=$3
+
+    tkl_version=$(echo $app_version | cut -d "-" -f 1)
+    deb_release=$(echo $app_version | cut -d "-" -f 2)
+    case "$deb_release" in
+        wheezy)  deb_version="debian-7";;
+        jessie)  deb_version="debian-8";;
+        *)       fatal "debian release not recognized: $deb_release"
+    esac
+
+    name="${deb_version}-turnkey-${app_name}_${tkl_version}-1_${app_arch}.tar.gz"
+    echo $name
+}
+
+download_image() {
+    image=$1
+    outdir=$2
+
+    if [ -e $outdir/$image ]; then
+        info "using cached appliance image: $outdir/$image"
+        return
+    fi
+
+    info "downloading appliance image..."
+    mkdir -p $outdir
+    sfproject="http://downloads.sourceforge.net/project/turnkeylinux"
+    wget --read-timeout=10 -t 3 -c $sfproject/openvz/$image -O $outdir/$image.tmp
+    mv $outdir/$image.tmp $outdir/$image
+}
+
+extract_image() {
+    image_path=$1
+    outdir=$2
+
+    info "extracting appliance image..."
+    mkdir -p $outdir
+    tar -zxf $image_path -C $outdir/
+}
+
+patch_rootfs() {
+    rootfs=$1
+    hostname=$2
+    inithooks=$3
+
+    info "inserting inithooks.conf..."
+    cp $inithooks $rootfs/etc/inithooks.conf
+
+    info "enabling rootpass inithook..."
+    chmod +x $rootfs/usr/lib/inithooks/firstboot.d/30rootpass
+
+    info "tagging build..."
+    version=$(cat $rootfs/etc/turnkey_version)
+    aptconf="Acquire::http::User-Agent \"TurnKey APT-HTTP/1.3 ($version lxc)\";"
+    echo $aptconf > $rootfs/etc/apt/apt.conf.d/01turnkey
+
+    info "disabling selinux..."
+    mkdir -p $rootfs/selinux
+    echo 0 > $rootfs/selinux/enforce
+
+    info "setting hostname..."
+    echo "$hostname" > $rootfs/etc/hostname
+    sed -i "s|^127.0.1.1 .*|127.0.1.1 $hostname|" $rootfs/etc/hosts
+
+    info "configuring network interfaces..."
+    interfaces=$rootfs/etc/network/interfaces
+    echo -e "auto lo\niface lo inet loopback\n" > $interfaces
+    echo -e "auto eth0\niface eth0 inet dhcp\n    hostname $hostname" >> $interfaces
+
+    info "disabling services not required in a container..."
+    chroot $rootfs /usr/sbin/update-rc.d -f udev remove
+    chroot $rootfs /usr/sbin/update-rc.d -f lvm2 remove
+    chroot $rootfs /usr/sbin/update-rc.d -f acpid remove
+    chroot $rootfs /usr/sbin/update-rc.d -f umountfs remove
+    chroot $rootfs /usr/sbin/update-rc.d -f hwclock.sh remove
+    chroot $rootfs /usr/sbin/update-rc.d -f hostname.sh remove
+    chroot $rootfs /usr/sbin/update-rc.d -f hwclockfirst.sh remove
+
+    info "creating ttys..."
+    [ -e $rootfs/dev/tty1 ] || mknod -m 666 $rootfs/dev/tty1 c 4 1
+    [ -e $rootfs/dev/tty2 ] || mknod -m 666 $rootfs/dev/tty2 c 4 2
+    [ -e $rootfs/dev/tty3 ] || mknod -m 666 $rootfs/dev/tty3 c 4 3
+
+    info "configuring the inittab..."
+    cat > $rootfs/etc/inittab <<EOF
+id:2:initdefault:
+si::sysinit:/etc/init.d/rcS
+l0:0:wait:/etc/init.d/rc 0
+l1:1:wait:/etc/init.d/rc 1
+l2:2:wait:/etc/init.d/rc 2
+l3:3:wait:/etc/init.d/rc 3
+l4:4:wait:/etc/init.d/rc 4
+l5:5:wait:/etc/init.d/rc 5
+l6:6:wait:/etc/init.d/rc 6
+z6:6:respawn:/sbin/sulogin
+1:2345:respawn:/sbin/getty 38400 console
+c1:12345:respawn:/sbin/getty 38400 tty1 linux
+c2:12345:respawn:/sbin/getty 38400 tty2 linux
+c3:12345:respawn:/sbin/getty 38400 tty3 linux
+EOF
+}
+
+_hex() { echo "`tr -dc A-F0-9 < /dev/urandom | head -c 2 | xargs`"; }
+
+generate_config() {
+    lxc_path=$1
+    lxc_name=$2
+    lxc_arch=$3
+    lxc_netlink=$4
+    lxc_rootfs=$5
+
+    info "generating $lxc_path/config ..."
+    cat >> $lxc_path/config <<EOF
+## Container
+lxc.utsname              = $lxc_name
+lxc.arch                 = $lxc_arch
+lxc.rootfs               = $lxc_rootfs
+lxc.tty                  = 3
+lxc.pts                  = 1024
+#lxc.console             = $lxc_path/log
+
+## Capabilities
+lxc.cap.drop             = mac_admin
+lxc.cap.drop             = mac_override
+lxc.cap.drop             = sys_admin
+lxc.cap.drop             = sys_module
+
+## Devices
+# Deny all devices
+lxc.cgroup.devices.deny  = a
+# mknod
+lxc.cgroup.devices.allow = c *:* m
+lxc.cgroup.devices.allow = b *:* m
+# /dev/null
+lxc.cgroup.devices.allow = c 1:3 rwm
+# /dev/zero
+lxc.cgroup.devices.allow = c 1:5 rwm
+# /dev/random
+lxc.cgroup.devices.allow = c 1:8 rwm
+# /dev/urandom
+lxc.cgroup.devices.allow = c 1:9 rwm
+# /dev/tty
+lxc.cgroup.devices.allow = c 5:0 rwm
+# /dev/console
+lxc.cgroup.devices.allow = c 5:1 rwm
+# /dev/ptmx
+lxc.cgroup.devices.allow = c 5:2 rwm
+# /dev/fuse
+lxc.cgroup.devices.allow = c 10:229 rwm
+# /dev/pts/*
+lxc.cgroup.devices.allow = c 136:* rwm
+# /dev/rtc
+lxc.cgroup.devices.allow = c 254:0 rwm
+
+## Filesystem
+lxc.mount.entry          = proc $lxc_rootfs/proc proc nodev,noexec,nosuid 0 0
+lxc.mount.entry          = sysfs $lxc_rootfs/sys sysfs defaults,ro 0 0
+lxc.mount.entry          = devpts $lxc_rootfs/dev/pts devpts defaults 0 0
+
+EOF
+
+    [ "$lxc_netlink" == "none" ] && return
+    cat >> $lxc_path/config <<EOF
+## Networking
+lxc.network.type         = veth
+lxc.network.flags        = up
+lxc.network.link         = $lxc_netlink
+lxc.network.ipv4         = 0.0.0.0/24
+lxc.network.hwaddr       = 00:1E:$(_hex):$(_hex):$(_hex):$(_hex)
+
+EOF
+}
+
+usage() {
+cat <<EOF
+TurnKey LXC Template Syntax: appname [options]
+
+Arguments::
+
+    appname          Appliance name (e.g., core)
+
+Options::
+
+    -a --arch=       Appliance architecture (default: hosts architecture)
+    -v --version=    Appliance version (default: 13.0-wheezy)
+    -c --cachedir=   Path to appliance cache (default: /var/cache/lxc/turnkey)
+
+    -i --inithooks=  Path to inithooks.conf (e.g., /root/inithooks.conf)
+                     Reference: http://www.turnkeylinux.org/docs/inithooks
+
+    -l --netlink=    Value of lxc.network.link (default: br0)
+                     Specify none to omit network configuration
+
+Required options (passed automatically by lxc-create):
+
+    -n --name=       container name (\$lxc_name)
+    -p --path=       container path (\$lxc_path/\$lxc_name)
+
+Example usage::
+
+    lxc-create -n core -t turnkey -- core -i /root/inithooks.conf
+
+EOF
+    exit 1
+}
+
+S_OPTS="hp:n:a:v:i:c:l:"
+L_OPTS="help,path:,name:,arch:,version:,inithooks:,cachedir:,netlink:"
+OPTIONS=$(getopt -o $S_OPTS -l $L_OPTS -- "$@")
+[ $? -ne 0 ] && usage
+eval set -- "$OPTIONS"
+
+app_arch=$(dpkg --print-architecture)
+app_version="13.0-wheezy"
+lxc_netlink="br0"
+cachedir="/var/cache/lxc/turnkey"
+while true; do
+    case "$1" in
+        -h|--help)      usage;;
+        -p|--path)      lxc_path=$2; shift ;;
+        -n|--name)      lxc_name=$2; shift ;;
+        -l|--netlink)   lxc_netlink=$2; shift ;;
+        -i|--inithooks) inithooks=$2; shift ;;
+        -c|--cachedir)  cachedir=$2; shift ;;
+        -a|--arch)      app_arch=$2; shift ;;
+        -v|--version)   app_version=$2; shift ;;
+        --)             app_name=$2; break ;;
+        *)              fatal "unknown argument: $1" ;;
+    esac
+    shift
+done
+
+[ "$(id -u)" != "0" ] && fatal "must be run as root"
+
+[ -z "$app_name" ] && fatal "appname not specified"
+[ -z "$app_arch" ] && fatal "architecture not specified"
+[ -z "$app_version" ] && fatal "version not specified"
+[ -z "$lxc_path" ] && fatal "path parameter is required"
+[ -z "$lxc_name" ] && fatal "name parameter is required"
+[ -z "$lxc_netlink" ] && fatal "netlink parameter is required"
+[ -e "$inithooks" ] || fatal "inithooks not specified or does not exist"
+
+case "$app_arch" in
+    i386)    lxc_arch=x86 ;;
+    amd64)   lxc_arch=amd64 ;;
+    *)       fatal "appliance architecture not recognized: $app_arch" ;;
+esac
+
+lxc_rootfs=$lxc_path/rootfs
+image_name=$(get_image_name $app_name $app_version $app_arch)
+
+download_image $image_name $cachedir
+extract_image $cachedir/$image_name $lxc_rootfs
+patch_rootfs $lxc_rootfs $lxc_name $inithooks
+generate_config $lxc_path $lxc_name $lxc_arch $lxc_netlink $lxc_rootfs 
+
