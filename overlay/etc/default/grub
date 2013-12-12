@@ -6,7 +6,7 @@ GRUB_HIDDEN_TIMEOUT=0
 GRUB_HIDDEN_TIMEOUT_QUIET=false
 GRUB_TIMEOUT=3
 GRUB_DISTRIBUTOR=`lsb_release -i -s 2> /dev/null || echo Debian`
-GRUB_CMDLINE_LINUX_DEFAULT=""
+GRUB_CMDLINE_LINUX_DEFAULT="cgroup_enable=memory"
 GRUB_CMDLINE_LINUX=""
 
 # Uncomment to disable graphical terminal (grub-pc only)
