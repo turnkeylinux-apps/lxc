@@ -5,3 +5,5 @@ dnsmasq
 dnsmasq-utils
 bridge-utils
 
+nginx
+

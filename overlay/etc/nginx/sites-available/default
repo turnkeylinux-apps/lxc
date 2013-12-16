@@ -1,0 +1,20 @@
+server {
+    listen 0.0.0.0:80 default_server;
+    server_name _ "";
+
+    root /var/www/;
+    index index.html;
+}
+
+server {
+    listen 0.0.0.0:443 default_server;
+    server_name _ "";
+
+    root /var/www/;
+    index index.html;
+
+    include /etc/nginx/include/ssl;
+    ssl_certificate /etc/ssl/certs/cert.crt;
+    ssl_certificate_key /etc/ssl/certs/cert.key;
+}
+
