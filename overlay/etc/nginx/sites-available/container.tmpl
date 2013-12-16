@@ -1,0 +1,66 @@
+server {
+    listen 0.0.0.0:80;
+    server_name DOMAIN;
+
+    location / {
+        include /etc/nginx/include/proxy;
+        proxy_pass http://CONTAINER/;
+    }
+}
+
+server {
+    listen 0.0.0.0:443;
+    server_name DOMAIN;
+
+    include /etc/nginx/include/ssl;
+    ssl_certificate /var/lib/lxc/CONTAINER/rootfs/etc/ssl/certs/cert.crt;
+    ssl_certificate_key /var/lib/lxc/CONTAINER/rootfs/etc/ssl/certs/cert.key;
+
+    location / {
+        include /etc/nginx/include/proxy;
+        proxy_pass https://CONTAINER/;
+    }
+}
+
+server {
+    listen 0.0.0.0:12320;
+    server_name DOMAIN;
+
+    include /etc/nginx/include/ssl;
+    ssl_certificate /var/lib/lxc/CONTAINER/rootfs/etc/ssl/certs/cert.crt;
+    ssl_certificate_key /var/lib/lxc/CONTAINER/rootfs/etc/ssl/certs/cert.key;
+
+    location / {
+        include /etc/nginx/include/proxy;
+        proxy_pass https://CONTAINER:12320/;
+    }
+}
+
+server {
+    listen 0.0.0.0:12321;
+    server_name DOMAIN;
+
+    include /etc/nginx/include/ssl;
+    ssl_certificate /var/lib/lxc/CONTAINER/rootfs/etc/ssl/certs/cert.crt;
+    ssl_certificate_key /var/lib/lxc/CONTAINER/rootfs/etc/ssl/certs/cert.key;
+
+    location / {
+        include /etc/nginx/include/proxy;
+        proxy_pass https://CONTAINER:12321/;
+    }
+}
+
+server {
+    listen 0.0.0.0:12322;
+    server_name DOMAIN;
+
+    include /etc/nginx/include/ssl;
+    ssl_certificate /var/lib/lxc/CONTAINER/rootfs/etc/ssl/certs/cert.crt;
+    ssl_certificate_key /var/lib/lxc/CONTAINER/rootfs/etc/ssl/certs/cert.key;
+
+    location / {
+        include /etc/nginx/include/proxy;
+        proxy_pass https://CONTAINER:12322/;
+    }
+}
+

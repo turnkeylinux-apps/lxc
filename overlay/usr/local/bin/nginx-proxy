@@ -1,0 +1,57 @@
+#!/bin/bash -e
+# Copyright (c) Alon Swartz <alon@turnkeylinux.org>
+
+info() { echo "INFO: $@"; }
+fatal() { echo "FATAL: $@" 1>&2; exit 1; }
+
+usage() {
+cat<<EOF
+Syntax: $(basename $0) domain container
+Create site configuration to proxy requests destined for domain to container
+
+Arguments::
+
+    domain      source domain
+    container   destination container name
+
+Example::
+
+    $(basename $0) www.example.com wordpress
+
+Notes::
+
+    # delete/disable site configuration for domain
+    rm -f /etc/nginx/sites-*/DOMAIN; /etc/init.d/nginx/reload
+
+    # template (preconfigured for 80, 443, 12320, 12321, 12322)
+    /etc/nginx/sites-available/container.tmpl
+
+EOF
+exit 1
+}
+
+if [[ "$#" != "2" ]]; then
+    usage
+fi
+
+domain=$1
+container=$2
+
+template=/etc/nginx/sites-available/container.tmpl
+container_rootfs=/var/lib/lxc/$container/rootfs
+site_enabled=/etc/nginx/sites-enabled/$domain
+site_available=/etc/nginx/sites-available/$domain
+
+[ -e "$template" ] || fatal "does not exist: $template"
+[ -e "$site_enabled" ] && fatal "already exists: $site_enabled"
+[ -e "$site_available" ] && fatal "already exists: $site_available"
+[ -e "$container_rootfs" ] || fatal "does not exist: $container_rootfs"
+
+cp $template $site_available
+sed -i "s|DOMAIN|$domain|" $site_available
+sed -i "s|CONTAINER|$container|" $site_available
+ln -s $site_available $site_enabled
+/etc/init.d/nginx reload
+
+info "created $site_enabled"
+
