@@ -18,3 +18,30 @@ server {
     ssl_certificate_key /etc/ssl/certs/cert.key;
 }
 
+server {
+    listen 0.0.0.0:12320 default_server;
+    server_name _ "";
+
+    include /etc/nginx/include/ssl;
+    ssl_certificate /etc/ssl/certs/cert.crt;
+    ssl_certificate_key /etc/ssl/certs/cert.key;
+
+    location / {
+        include /etc/nginx/include/proxy;
+        proxy_pass https://127.0.0.1:22320/;
+    }
+}
+
+server {
+    listen 0.0.0.0:12321 default_server;
+    server_name _ "";
+
+    include /etc/nginx/include/ssl;
+    ssl_certificate /etc/ssl/certs/cert.crt;
+    ssl_certificate_key /etc/ssl/certs/cert.key;
+
+    location / {
+        include /etc/nginx/include/proxy;
+        proxy_pass https://127.0.0.1:22321/;
+    }
+}
