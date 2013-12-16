@@ -1,8 +1,113 @@
-<html>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html lang="en">
     <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <meta http-equiv="Content-Style-Type" content="text/css">
+        <meta http-equiv="Content-Script-Type" content="text/javascript">
+
         <title>TurnKey LXC</title>
+
+        <link rel="stylesheet" href="/css/ui.tabs.css" type="text/css" media="print, projection, screen">
+        <link rel="stylesheet" href="/css/base.css" type="text/css">
+
+        <script src="/js/jquery-1.2.6.js" type="text/javascript"></script>
+        <script src="/js/ui.core.js" type="text/javascript"></script>
+        <script src="/js/ui.tabs.js" type="text/javascript"></script>
+        <script type="text/javascript">
+            $(function() {
+                $('#container-1 > ul').tabs({ fx: { opacity: 'toggle'} });
+            });
+        </script>
+        <script type="text/javascript">
+            jQuery(document).ready(function($) {
+              webshell="https://"+window.location.hostname+":12320";
+              document.getElementById("webshell").href = webshell;
+              webmin="https://"+window.location.hostname+":12321";
+              document.getElementById("webmin").href = webmin;
+            });
+        </script>
     </head>
+
     <body>
         <h1>TurnKey LXC</h1>
+
+        <div id="container-1" style="width:540px;">
+            <ul>
+                <li><a href="#cp"><span>Control Panel</span></a></li>
+                <li><a href="#bridge"><span>Example (Bridge)</span></a></li>
+                <li><a href="#nat"><span>Example (NAT)</span></a></li>
+            </ul>
+
+            <div id="cp">
+                <div class="fragment-content">
+                    <div>
+                        <a id="webshell" href="">
+                        <img src="/images/shell.png"/>Web Shell</a>
+                    </div>
+                    <div>
+                        <a id="webmin" href="">
+                        <img src="/images/webmin.png"/>Webmin</a>
+                    </div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+
+                    <h2>Resources and references</h2>
+                    <ul>
+                        <li><a href="http://linuxcontainers.org/">Official LXC homepage</a></li>
+                        <li><a href="http://www.turnkeylinux.org/lxc">TurnKey LXC release notes</a></li>
+                        <li><a href="https://github.com/turnkeylinux-apps/lxc/tree/master/docs">TurnKey LXC Usage documentation</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div id="bridge">
+                <div class="fragment-content">
+                    <h3>Create inithooks configuration (/root/wp1.conf)</h3>
+                    <pre>export ROOT_PASS=secretrootpass
+export DB_PASS=secretmysqlpass
+export APP_PASS=secretadminwppass
+export APP_EMAIL=admin@example.com
+export APP_DOMAIN=www.example.com
+export HUB_APIKEY=SKIP
+export SEC_UPDATES=FORCE
+</pre>
+
+                    <h3>Create LXC container</h3>
+                    <pre>lxc-create -n wp1 -t turnkey -- wordpress -i /root/wp1.conf</pre>
+
+                    <h3>Start the container in the background</h3>
+                    <pre>lxc-start -n wp1 -d</pre>
+</pre>
+                </div>
+            </div>
+            <div id="nat">
+                <div class="fragment-content">
+                    <h3>Create inithooks configuration (/root/wp1.conf)</h3>
+                    <pre>export ROOT_PASS=secretrootpass
+export DB_PASS=secretmysqlpass
+export APP_PASS=secretadminwppass
+export APP_EMAIL=admin@example.com
+export APP_DOMAIN=www.example.com
+export HUB_APIKEY=SKIP
+export SEC_UPDATES=FORCE
+</pre>
+
+                    <h3>Create LXC container</h3>
+                    <pre>lxc-create -n wp1 -t turnkey -- wordpress -i /root/wp1.conf -l natbr0</pre>
+
+                    <h3>Start the container in the background</h3>
+                    <pre>lxc-start -n wp1 -d</pre>
+
+                    <h3>Configure proxying web requests for domain to container</h3>
+                    <pre>nginx-proxy www.example.com wp1</pre>
+
+                    <h3>Expose the container SSH service</h3>
+                    <pre>ipaddr=$(host wp1 | cut -d " " -f 4)
+iptables-nat add 2222 $ipaddr:22
+</pre>
+                </div>
+            </div>
+        </div>
     </body>
 </html>
