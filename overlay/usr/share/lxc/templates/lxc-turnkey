@@ -43,7 +43,7 @@ extract_image() {
 
     info "extracting appliance image..."
     mkdir -p $outdir
-    tar -zxf $image_path -C $outdir/
+    tar --numeric-owner -zxf $image_path -C $outdir/
 }
 
 patch_rootfs() {
