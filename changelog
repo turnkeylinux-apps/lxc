@@ -14,6 +14,7 @@ turnkey-lxc-13.0 (1) turnkey; urgency=low
     - Preconfigured network bridge interface.
     - Preconfigured network NAT bridge interface.
     - Preconfigured dnsmasq on NAT interface pricing DHCP and DNS.
+    - Preconfigured apt-cacher-ng binding to NAT interface.
     - Preconfigured to support IP forwarding.
     - Inithook to setup and enable control groups.
     - Includes TurnKey web control panel.

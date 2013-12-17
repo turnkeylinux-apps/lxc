@@ -95,9 +95,12 @@ Continuing from the earlier inithooks example, we'll create a TurnKey
 Wordpress container. We'll also use the NAT bridge as it requires some
 extra steps to expose the containers services to the network.
 
+Additionally, we'll also specify an APT proxy (preconfigured on the 
+TurnKey LXC appliance) so other containers can leverage the cache.
+
 1. Create the container::
 
-    # lxc-create -n wp1 -t turnkey -- wordpress -i /root/inithooks.conf -l natbr0
+    # lxc-create -n wp1 -t turnkey -- wordpress -i /root/inithooks.conf -l natbr0 -x http://192.168.121.1:3124
 
 2. Start the container in the background::
 

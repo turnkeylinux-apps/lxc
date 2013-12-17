@@ -7,3 +7,7 @@ sed -i "/^#net.ipv4.ip_forward=1/ s/#//" /etc/sysctl.conf
 sed -i "s|^SHELLINABOX_PORT=12320|SHELLINABOX_PORT=22320|" /etc/default/shellinabox
 sed -i "s|^port=12321|port=22321|" /etc/webmin/miniserv.conf
 
+# configure apt-cacher-ng to bind to natbr0
+CONF=/etc/apt-cacher-ng/acng.conf
+sed "s|MainInterface|MainInterface\nBindAddress: 192.168.121.1|" $CONF
+

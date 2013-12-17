@@ -6,4 +6,5 @@ dnsmasq-utils
 bridge-utils
 
 nginx
+apt-cacher-ng
 
