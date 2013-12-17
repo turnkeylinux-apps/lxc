@@ -1,0 +1,26 @@
+turnkey-lxc-13.0 (1) turnkey; urgency=low
+
+  * Initial public release of TurnKey LXC.
+
+  * LXC related:
+
+    - Generic TurnKey LXC template for downloading and creating a 
+      container of any TurnKey appliance, supporting preseeding and
+      customization of network link.
+    - Custom nginx-proxy script for exposing containers web services.
+    - Changed webshell port to 22320 to support nginx-proxy.
+    - Changed webmin port to 22321 to support nginx-proxy.
+    - Custom iptable-nat script for exposing containers ports.
+    - Preconfigured network bridge interface.
+    - Preconfigured network NAT bridge interface.
+    - Preconfigured dnsmasq on NAT interface pricing DHCP and DNS.
+    - Preconfigured to support IP forwarding.
+    - Inithook to setup and enable control groups.
+    - Includes TurnKey web control panel.
+    - Includes example inithooks configuration for preseeding.
+
+  * Note: Please refer to turnkey-core's changelog for changes common to all
+    appliances. Here we only describe changes specific to this appliance.
+
+ -- Alon Swartz <alon@turnkeylinux.org>  Thu, 12 Dec 2013 16:20:32 +0200
+
