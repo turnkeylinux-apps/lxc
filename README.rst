@@ -15,6 +15,7 @@ top of that:
     - Download and create a container of any TurnKey appliance.
     - Insert specified inithooks.conf into container for preseeding.
     - Supports configuration of network link (e.g., br0, natbr0, none).
+    - Supports configuration of apt proxy.
     - Generic enough to be used on any LXC enabled distribution.
 
 - Easily expose NAT containers services:

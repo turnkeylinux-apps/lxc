@@ -5,8 +5,8 @@ turnkey-lxc-13.0 (1) turnkey; urgency=low
   * LXC related:
 
     - Generic TurnKey LXC template for downloading and creating a 
-      container of any TurnKey appliance, supporting preseeding and
-      customization of network link.
+      container of any TurnKey appliance, supporting preseeding,
+      customization of network link and apt proxy.
     - Custom nginx-proxy script for exposing containers web services.
     - Changed webshell port to 22320 to support nginx-proxy.
     - Changed webmin port to 22321 to support nginx-proxy.

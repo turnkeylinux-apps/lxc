@@ -23,6 +23,7 @@ the template. For example, to show the templates usage we could run::
         -a --arch=       Appliance architecture (default: hosts architecture)
         -v --version=    Appliance version (default: 13.0-wheezy)
         -c --cachedir=   Path to appliance cache (default: /var/cache/lxc/turnkey)
+        -x --aptproxy=   Address of APT Proxy (e.g., http://192.168.121.1:3142)
 
         -i --inithooks=  Path to inithooks.conf (e.g., /root/inithooks.conf)
                          Reference: http://www.turnkeylinux.org/docs/inithooks
