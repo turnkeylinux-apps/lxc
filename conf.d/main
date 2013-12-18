@@ -9,5 +9,5 @@ sed -i "s|^port=12321|port=22321|" /etc/webmin/miniserv.conf
 
 # configure apt-cacher-ng to bind to natbr0
 CONF=/etc/apt-cacher-ng/acng.conf
-sed "s|MainInterface|MainInterface\nBindAddress: 192.168.121.1|" $CONF
+sed -i "s|MainInterface|MainInterface\nBindAddress: 192.168.121.1|" $CONF
 
