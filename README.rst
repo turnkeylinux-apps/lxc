@@ -1,11 +1,11 @@
 LXC - Linux Containers
 ======================
 
-`LXC`_ can be thought of as the middle ground between a chroot on steriods and
-a full fledged virtual machine. LXC is a userspace interface to the Linux
-kernel containment features (such as namespaces and control groups), allowing
-sandboxing processes from one another and controlling their resource
-allocations. 
+`LXC`_ AKA Linux Containers is a lightweight virtualization system
+supported natively by the Linux kernel. This "meta" appliance makes it
+easy to use LXC to run multiple TurnKey appliances on single server or
+virtual machine while maintaining secure isolation and resource
+allocation.
 
 This appliance includes all the standard features in `TurnKey Core`_, and on
 top of that:
