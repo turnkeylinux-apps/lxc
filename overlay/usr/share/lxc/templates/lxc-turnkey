@@ -12,6 +12,7 @@ get_image_name() {
     tkl_version=$(echo $app_version | cut -d "-" -f 1)
     deb_release=$(echo $app_version | cut -d "-" -f 2)
     case "$deb_release" in
+        squeeze) deb_version="debian-6";;
         wheezy)  deb_version="debian-7";;
         jessie)  deb_version="debian-8";;
         *)       fatal "debian release not recognized: $deb_release"
