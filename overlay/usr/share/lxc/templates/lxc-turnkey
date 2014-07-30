@@ -231,7 +231,15 @@ eval set -- "$OPTIONS"
 
 app_arch=$(dpkg --print-architecture)
 app_version="13.0-wheezy"
-lxc_netlink="br0"
+
+lxc_netlink="none"
+for br in lxcbr0 virbr0 br0; do
+    if [ -d /sys/class/net/$br/bridge ]; then
+        lxc_netlink="$br"
+        break
+    fi
+done
+
 cachedir="/var/cache/lxc/turnkey"
 while true; do
     case "$1" in
