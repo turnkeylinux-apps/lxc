@@ -208,6 +208,8 @@ Options::
     -l --netlink=    Value of lxc.network.link (default: br0)
                      Specify none to omit network configuration
 
+       --rootfs=     Path to root filesystem (default: \$lxc_path/\$lxc_name/rootfs)
+
 Required options (passed automatically by lxc-create):
 
     -n --name=       container name (\$lxc_name)
@@ -222,7 +224,7 @@ EOF
 }
 
 S_OPTS="hp:n:a:v:i:c:l:x:"
-L_OPTS="help,path:,name:,arch:,version:,inithooks:,cachedir:,netlink:,aptproxy:"
+L_OPTS="help,rootfs:,path:,name:,arch:,version:,inithooks:,cachedir:,netlink:,aptproxy:"
 OPTIONS=$(getopt -o $S_OPTS -l $L_OPTS -- "$@")
 [ $? -ne 0 ] && usage
 eval set -- "$OPTIONS"
@@ -235,6 +237,7 @@ while true; do
     case "$1" in
         -h|--help)      usage;;
         -p|--path)      lxc_path=$2; shift ;;
+        --rootfs)       lxc_rootfs=$2; shift ;;
         -n|--name)      lxc_name=$2; shift ;;
         -l|--netlink)   lxc_netlink=$2; shift ;;
         -i|--inithooks) inithooks=$2; shift ;;
@@ -264,7 +267,18 @@ case "$app_arch" in
     *)       fatal "appliance architecture not recognized: $app_arch" ;;
 esac
 
-lxc_rootfs=$lxc_path/rootfs
+# detect rootfs
+lxc_config="$lxc_path/config"
+# if $lxc_rootfs exists here, it was passed in with --rootfs
+if [ -z "$rootfs" ]; then
+  # try to get rootfs from config
+    lxc_rootfs=$(awk -F= '/^lxc.rootfs =/{ print $2 }' $lxc_config)
+    if [ -z "$rootfs" ]; then
+      # still null, so use default
+        lxc_rootfs="$lxc_path/rootfs"
+    fi
+fi
+
 image_name=$(get_image_name $app_name $app_version $app_arch)
 
 download_image $image_name $cachedir
