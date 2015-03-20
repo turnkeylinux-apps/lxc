@@ -100,7 +100,7 @@ TurnKey LXC appliance) so other containers can leverage the cache.
 
 1. Create the container::
 
-    # lxc-create -n wp1 -t turnkey -- wordpress -i /root/inithooks.conf -l natbr0 -x http://192.168.121.1:3124
+    # lxc-create -n wp1 -t turnkey -- wordpress -i /root/inithooks.conf -l natbr0 -x http://192.168.121.1:3142
 
 2. Start the container in the background::
 
