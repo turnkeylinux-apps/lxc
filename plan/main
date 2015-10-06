@@ -4,6 +4,7 @@ lxc
 dnsmasq
 dnsmasq-utils
 bridge-utils
+xz-utils          /* required by lxc download template */
 
 nginx
 apt-cacher-ng
