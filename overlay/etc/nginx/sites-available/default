@@ -14,8 +14,8 @@ server {
     index index.html;
 
     include /etc/nginx/include/ssl;
-    ssl_certificate /etc/ssl/certs/cert.crt;
-    ssl_certificate_key /etc/ssl/certs/cert.key;
+    ssl_certificate /etc/ssl/certs/cert.pem;
+    ssl_certificate_key /etc/ssl/private/cert.key;
 }
 
 server {
@@ -23,8 +23,8 @@ server {
     server_name _ "";
 
     include /etc/nginx/include/ssl;
-    ssl_certificate /etc/ssl/certs/cert.crt;
-    ssl_certificate_key /etc/ssl/certs/cert.key;
+    ssl_certificate /etc/ssl/certs/cert.pem;
+    ssl_certificate_key /etc/ssl/private/cert.key;
 
     location / {
         include /etc/nginx/include/proxy;
@@ -37,8 +37,8 @@ server {
     server_name _ "";
 
     include /etc/nginx/include/ssl;
-    ssl_certificate /etc/ssl/certs/cert.crt;
-    ssl_certificate_key /etc/ssl/certs/cert.key;
+    ssl_certificate /etc/ssl/certs/cert.pem;
+    ssl_certificate_key /etc/ssl/private/cert.key;
 
     location / {
         include /etc/nginx/include/proxy;
