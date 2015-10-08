@@ -7,6 +7,10 @@ sed -i "/^#net.ipv4.ip_forward=1/ s/#//" /etc/sysctl.conf
 sed -i "s|^accept  = 12320|accept  = 22320|" /etc/stunnel/stunnel.conf
 sed -i "s|^accept  = 12321|accept  = 22321|" /etc/stunnel/stunnel.conf
 
+# remove ssl certificates from ssl include
+# allow nginx proxy to use container certs and keys
+sed -i "/^ssl_certificate.*/ d" /etc/nginx/include/ssl
+
 # configure apt-cacher-ng to bind to natbr0
 CONF=/etc/apt-cacher-ng/acng.conf
 sed -i "s|MainInterface|MainInterface\nBindAddress: 192.168.121.1|" $CONF
