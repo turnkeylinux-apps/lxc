@@ -128,14 +128,11 @@ c3:12345:respawn:/sbin/getty 38400 tty3 linux
 EOF
 }
 
-_hex() { echo "`tr -dc A-F0-9 < /dev/urandom | head -c 2 | xargs`"; }
-
 generate_config() {
     lxc_path=$1
     lxc_name=$2
     lxc_arch=$3
-    lxc_netlink=$4
-    lxc_rootfs=$5
+    lxc_rootfs=$4
 
     info "generating $lxc_path/config ..."
     cat >> $lxc_path/config <<EOF
@@ -186,17 +183,6 @@ lxc.mount.entry          = sysfs $lxc_rootfs/sys sysfs defaults,ro 0 0
 lxc.mount.entry          = devpts $lxc_rootfs/dev/pts devpts defaults 0 0
 
 EOF
-
-    [ "$lxc_netlink" == "none" ] && return
-    cat >> $lxc_path/config <<EOF
-## Networking
-lxc.network.type         = veth
-lxc.network.flags        = up
-lxc.network.link         = $lxc_netlink
-lxc.network.ipv4         = 0.0.0.0/24
-lxc.network.hwaddr       = 00:1E:$(_hex):$(_hex):$(_hex):$(_hex)
-
-EOF
 }
 
 usage() {
@@ -217,9 +203,6 @@ Options::
     -i --inithooks=  Path to inithooks.conf (e.g., /root/inithooks.conf)
                      Reference: http://www.turnkeylinux.org/docs/inithooks
 
-    -l --netlink=    Value of lxc.network.link (default: br0)
-                     Specify none to omit network configuration
-
        --rootfs=     Path to root filesystem (default: \$lxc_path/\$lxc_name/rootfs)
 
 Required options (passed automatically by lxc-create):
@@ -235,22 +218,14 @@ EOF
     exit 1
 }
 
-S_OPTS="hp:n:a:v:i:c:l:x:"
-L_OPTS="help,rootfs:,path:,name:,arch:,version:,inithooks:,cachedir:,netlink:,aptproxy:"
+S_OPTS="hp:n:a:v:i:c:x:"
+L_OPTS="help,rootfs:,path:,name:,arch:,version:,inithooks:,cachedir:,aptproxy:"
 OPTIONS=$(getopt -o $S_OPTS -l $L_OPTS -- "$@")
 [ $? -ne 0 ] && usage
 eval set -- "$OPTIONS"
 
 app_arch=$(dpkg --print-architecture)
 app_version="13.0-wheezy"
-
-lxc_netlink="none"
-for br in lxcbr0 virbr0 br0; do
-    if [ -d /sys/class/net/$br/bridge ]; then
-        lxc_netlink="$br"
-        break
-    fi
-done
 
 cachedir="/var/cache/lxc/turnkey"
 while true; do
@@ -259,7 +234,6 @@ while true; do
         -p|--path)      lxc_path=$2; shift ;;
         --rootfs)       lxc_rootfs=$2; shift ;;
         -n|--name)      lxc_name=$2; shift ;;
-        -l|--netlink)   lxc_netlink=$2; shift ;;
         -i|--inithooks) inithooks=$2; shift ;;
         -x|--aptproxy)  aptproxy=$2; shift ;;
         -c|--cachedir)  cachedir=$2; shift ;;
@@ -278,7 +252,6 @@ done
 [ -z "$app_version" ] && fatal "version not specified"
 [ -z "$lxc_path" ] && fatal "path parameter is required"
 [ -z "$lxc_name" ] && fatal "name parameter is required"
-[ -z "$lxc_netlink" ] && fatal "netlink parameter is required"
 [ -e "$inithooks" ] || fatal "inithooks not specified or does not exist"
 
 case "$app_arch" in
@@ -304,5 +277,5 @@ image_name=$(get_image_name $app_name $app_version $app_arch)
 download_image $image_name $cachedir
 extract_image $cachedir/$image_name $lxc_rootfs
 patch_rootfs $lxc_rootfs $lxc_name $inithooks $aptproxy
-generate_config $lxc_path $lxc_name $lxc_arch $lxc_netlink $lxc_rootfs 
+generate_config $lxc_path $lxc_name $lxc_arch $lxc_rootfs 
 
