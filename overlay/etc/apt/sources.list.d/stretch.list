@@ -1,0 +1,2 @@
+deb http://http.debian.net/debian stretch main
+deb http://security.debian.org/ stretch/updates main
