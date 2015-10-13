@@ -19,3 +19,8 @@ xz-utils
 /* required by lxc ubuntu template */
 debootstrap
 ubuntu-archive-keyring
+
+/* required for ansible compatibility */
+aptitude
+python-apt
+
