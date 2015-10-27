@@ -6,6 +6,10 @@ Package: lxc
 Pin: release a=testing
 Pin-Priority: 600
 
+Package: python-lxc
+Pin: release a=testing
+Pin-Priority: 600
+
 Package: liblxc1
 Pin: release a=testing
 Pin-Priority: 600
@@ -13,3 +17,4 @@ Pin-Priority: 600
 Package: lxc-dev
 Pin: release a=testing
 Pin-Priority: 600
+
