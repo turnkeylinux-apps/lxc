@@ -15,9 +15,3 @@ sed -i "/^ssl_certificate.*/ d" /etc/nginx/include/ssl
 CONF=/etc/apt-cacher-ng/acng.conf
 sed -i "s|MainInterface|MainInterface\nBindAddress: 192.168.121.1|" $CONF
 
-# install lxc & lxc-dev from debian stretch (testing)
-apt-get update -q
-apt-get install -qy lxc lxc-dev
-
-# install python2 bindings for lxc
-pip2 install lxc-python2
