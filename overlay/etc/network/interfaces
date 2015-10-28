@@ -17,6 +17,7 @@ iface natbr0 inet static
     address 192.168.121.1
     netmask 255.255.255.0
     pre-up brctl addbr natbr0
+    post-up /sbin/ethtool -K natbr0 tx off
     post-up /etc/init.d/dnsmasq restart
     post-down brctl delbr natbr0
 
