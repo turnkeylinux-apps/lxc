@@ -20,4 +20,4 @@ ubuntu-archive-keyring
 /* required for ansible compatibility */
 aptitude
 python-apt
-
+bzip2
