@@ -14,6 +14,10 @@ xz-utils
 debootstrap
 ubuntu-archive-keyring
 
+/* required by rpm based distributions */
+rpm
+yum
+
 /* required for ansible compatibility */
 aptitude
 python-apt
