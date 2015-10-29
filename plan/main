@@ -4,14 +4,11 @@ lxc
 dnsmasq
 dnsmasq-utils
 bridge-utils
-
-xz-utils          /* required by lxc download template */
-
-debootstrap       /* required by lxc ubuntu template */
-ubuntu-archive-keyring
-
 nginx
 apt-cacher-ng
+
+/* required by lxc download template */
+xz-utils
 
 /* required by lxc ubuntu template */
 debootstrap
