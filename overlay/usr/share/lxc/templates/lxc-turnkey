@@ -107,30 +107,30 @@ EOF
 
     # reconfigure some services
     if [ -z "$LANG" ]; then
-        chroot $rootfs locale-gen en_US.UTF-8 UTF-8
-        chroot $rootfs update-locale LANG=en_US.UTF-8
+        chroot ${rootfs} locale-gen en_US.UTF-8 UTF-8
+        chroot ${rootfs} update-locale LANG=en_US.UTF-8
     else
         encoding=$(echo $LANG | cut -d. -f2)
-        chroot $rootfs sed -e "s/^# \(${LANG} ${encoding}\)/\1/" \
+        chroot ${rootfs} sed -e "s/^# \(${LANG} ${encoding}\)/\1/" \
             -i /etc/locale.gen 2> /dev/null
-        chroot $rootfs locale-gen $LANG $encoding
-        chroot $rootfs update-locale LANG=$LANG
+        chroot ${rootfs} locale-gen $LANG $encoding
+        chroot ${rootfs} update-locale LANG=$LANG
     fi
 
     # remove pointless services in a container
-    chroot $rootfs /usr/sbin/update-rc.d -f checkroot.sh disable
-    chroot $rootfs /usr/sbin/update-rc.d -f umountfs disable
-    chroot $rootfs /usr/sbin/update-rc.d -f hwclock.sh disable
-    chroot $rootfs /usr/sbin/update-rc.d -f hwclockfirst.sh disable
+    chroot ${rootfs} /usr/sbin/update-rc.d -f checkroot.sh disable
+    chroot ${rootfs} /usr/sbin/update-rc.d -f umountfs disable
+    chroot ${rootfs} /usr/sbin/update-rc.d -f hwclock.sh disable
+    chroot ${rootfs} /usr/sbin/update-rc.d -f hwclockfirst.sh disable
 
     # set initial timezone as on host
     if [ -f /etc/timezone ]; then
-        cat /etc/timezone > $rootfs/etc/timezone
-        chroot $rootfs dpkg-reconfigure -f noninteractive tzdata
+        cat /etc/timezone > ${rootfs}/etc/timezone
+        chroot ${rootfs} dpkg-reconfigure -f noninteractive tzdata
     elif [ -f /etc/sysconfig/clock ]; then
         . /etc/sysconfig/clock
-        echo $ZONE > $rootfs/etc/timezone
-        chroot $rootfs dpkg-reconfigure -f noninteractive tzdata
+        echo $ZONE > ${rootfs}/etc/timezone
+        chroot ${rootfs} dpkg-reconfigure -f noninteractive tzdata
     else
         echo "Timezone in container is not configured. Adjust it manually."
     fi
@@ -189,8 +189,8 @@ configure_debian_systemd() {
     mkdir -p ${rootfs}/etc/systemd/system/getty.target.wants
 
     # Fix getty-static-service as debootstrap does not install dbus
-    if [ -e $rootfs//lib/systemd/system/getty-static.service ] ; then
-        sed 's/ getty@tty[5-9].service//g' $rootfs/lib/systemd/system/getty-static.service |  sed 's/\(tty2-tty\)[5-9]/\14/g' > $rootfs/etc/systemd/system/getty-static.service
+    if [ -e ${rootfs}//lib/systemd/system/getty-static.service ] ; then
+        sed 's/ getty@tty[5-9].service//g' ${rootfs}/lib/systemd/system/getty-static.service |  sed 's/\(tty2-tty\)[5-9]/\14/g' > ${rootfs}/etc/systemd/system/getty-static.service
     fi
 
     # This function has been copied and adapted from lxc-fedora
@@ -331,33 +331,34 @@ copy_configuration() {
 
     # Generate the configuration file
     ## Add all the includes
-    echo "" >> $path/config
-    echo "# Common configuration" >> $path/config
+    echo "" >> ${path}/config
+    echo "# Common configuration" >> ${path}/config
+    echo ""lxc.aa_profile = lxc-container-default-with-mounting"" >> ${path}/config
     if [ -e "${LXC_TEMPLATE_CONFIG}/debian.common.conf" ]; then
-        echo "lxc.include = ${LXC_TEMPLATE_CONFIG}/debian.common.conf" >> $path/config
+        echo "lxc.include = ${LXC_TEMPLATE_CONFIG}/debian.common.conf" >> ${path}/config
     fi
     if [ -e "${LXC_TEMPLATE_CONFIG}/debian.${release}.conf" ]; then
-        echo "lxc.include = ${LXC_TEMPLATE_CONFIG}/debian.${release}.conf" >> $path/config
+        echo "lxc.include = ${LXC_TEMPLATE_CONFIG}/debian.${release}.conf" >> ${path}/config
     fi
 
     ## Add the container-specific config
-    echo "" >> $path/config
-    echo "# Container specific configuration" >> $path/config
-    grep -q "^lxc.rootfs" $path/config 2> /dev/null || echo "lxc.rootfs = $rootfs" >> $path/config
+    echo "" >> ${path}/config
+    echo "# Container specific configuration" >> ${path}/config
+    grep -q "^lxc.rootfs" ${path}/config 2> /dev/null || echo "lxc.rootfs = ${rootfs}" >> ${path}/config
 
-    cat <<EOF >> $path/config
-lxc.utsname = $name
-lxc.arch = $arch
+    cat <<EOF >> ${path}/config
+lxc.utsname = ${name}
+lxc.arch = ${arch}
 EOF
 
     # if there is exactly one veth network entry, make sure it has an
     # associated hwaddr.
-    nics=`grep -e '^lxc\.network\.type[ \t]*=[ \t]*veth' $path/config | wc -l`
+    nics=`grep -e '^lxc\.network\.type[ \t]*=[ \t]*veth' ${path}/config | wc -l`
     if [ $nics -eq 1 ]; then
-        grep -q "^lxc.network.hwaddr" $path/config || sed -i -e "/^lxc\.network\.type[ \t]*=[ \t]*veth/a lxc.network.hwaddr = 00:16:3e:$(openssl rand -hex 3| sed 's/\(..\)/\1:/g; s/.$//')" $path/config
+        grep -q "^lxc.network.hwaddr" ${path}/config || sed -i -e "/^lxc\.network\.type[ \t]*=[ \t]*veth/a lxc.network.hwaddr = 00:16:3e:$(openssl rand -hex 3| sed 's/\(..\)/\1:/g; s/.$//')" ${path}/config
     fi
 
-    [ ! -f $path/config ] && warn "failed to add configuration"
+    [ ! -f ${path}/config ] && warn "failed to add configuration"
 
     return 0
 }
@@ -435,13 +436,13 @@ Options::
     -i --inithooks=  Path to inithooks.conf (default: /root/inithooks.conf)
                      Reference: http://www.turnkeylinux.org/docs/inithooks
 
-       --rootfs=     Path to root filesystem (default: \$path/\$name/rootfs)
+       --rootfs=     Path to root filesystem (default: \${path}/\${name}/rootfs)
     -c --clean       Clean the cache i.e. purge all downloaded appliance images
 
 Required options (passed automatically by lxc-create):
 
-    -n --name=       container name (\$name)
-    -p --path=       container path (\$path/\$name)
+    -n --name=       container name (\${name})
+    -p --path=       container path (\${path}/\${name})
 
 Example usage::
 
@@ -484,33 +485,33 @@ done
 
 [ "$(id -u)" != "0" ] && fatal "must be run as root"
 
-[ -z "$app_name" ]    && fatal "appname not specified"
-[ -z "$arch" ]        && fatal "architecture not specified"
-[ -z "$version" ]     && fatal "version not specified"
-[ -z "$path" ]        && fatal "path parameter is required"
-[ -z "$name" ]        && fatal "name parameter is required"
-[ -e "$inithooks" ]   || fatal "inithooks not specified or does not exist"
+[ -z "${app_name}" ]    && fatal "appname not specified"
+[ -z "${arch}" ]        && fatal "architecture not specified"
+[ -z "${version}" ]     && fatal "version not specified"
+[ -z "${path}" ]        && fatal "path parameter is required"
+[ -z "${name}" ]        && fatal "name parameter is required"
+[ -e "${inithooks}" ]   || fatal "inithooks not specified or does not exist"
 
-if [ ! -z "$clean" -a -z "$path" ]; then
+if [ ! -z "${clean}" -a -z "${path}" ]; then
     clean || exit 1
     exit 0
 fi
 
-case "$arch" in
+case "${arch}" in
      i386)             ;;
     amd64)             ;;
       x86)   arch=i386 ;;
      i686)   arch=i386 ;;
    x86_64)   arch=amd64 ;;
-        *)   fatal "appliance architecture not supported: $arch" ;;
+        *)   fatal "appliance architecture not supported: ${arch}" ;;
 esac
 
-[ $hostarch = "i386" -a $arch = "amd64" ] && fatal "can't create $arch container on $hostarch"
+[ $hostarch = "i386" -a ${arch} = "amd64" ] && fatal "can't create ${arch} container on $hostarch"
 
 type debootstrap
 [ $? -ne 0 ] && fatal "'debootstrap' command is missing"
 
-release=$(echo $version | cut -d "-" -f 2)
+release=$(echo ${version} | cut -d "-" -f 2)
 host_release=$( lsb_release | awk '/^Codename:/ { print $2; }')
 release=${release:-${host_release}}
 valid_releases=('squeeze' 'wheezy' 'jessie' 'stretch' 'sid')
@@ -520,7 +521,7 @@ if [[ ! "${valid_releases[*]}" =~ (^|[^[:alpha:]])$release([^[:alpha:]]|$) ]]; t
 fi
 
 # detect rootfs
-config="$path/config"
+config="${path}/config"
 if [ -z "${rootfs}" ]; then
     if [ -f "${config}" ]; then
         if grep -q '^lxc.rootfs' $config 2> /dev/null ; then
@@ -530,21 +531,21 @@ if [ -z "${rootfs}" ]; then
     rootfs=${rootfs:-${path}/rootfs}
 fi
 
-image=$(get_image_name $app_name $version $arch)
+image=$(get_image_name ${app_name} ${version} ${arch})
 
-install_turnkey $image $rootfs
-[ $? -ne 0 ] && fatal "failed to install turnkey $app_name"
+install_turnkey ${image} ${rootfs}
+[ $? -ne 0 ] && fatal "failed to install turnkey ${app_name}"
 
-configure_debian $rootfs $name
+configure_debian ${rootfs} ${name}
 [ $? -ne 0 ] && fatal "failed to configure debian for a container"
 
-configure_turnkey $rootfs $inithooks $aptproxy
+configure_turnkey ${rootfs} ${inithooks} ${aptproxy}
 [ $? -ne 0 ] && fatal "failed to configure turnkey for a container"
 
-copy_configuration $path $rootfs $name $arch
+copy_configuration ${path} ${rootfs} ${name} ${arch}
 [ $? -ne 0 ] && fatal "failed write configuration file"
 
-configure_debian_systemd $path $rootfs
+configure_debian_systemd ${path} ${rootfs}
 [ $? -ne 0 ] && fatal "failed to configure systemd"
 
 post_process ${rootfs} ${release} ${arch} ${hostarch}
