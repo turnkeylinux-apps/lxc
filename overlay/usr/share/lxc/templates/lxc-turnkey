@@ -117,11 +117,11 @@ EOF
         chroot ${rootfs} update-locale LANG=$LANG
     fi
 
-    # remove pointless services in a container
-    chroot ${rootfs} /usr/sbin/update-rc.d -f checkroot.sh disable
-    chroot ${rootfs} /usr/sbin/update-rc.d -f umountfs disable
-    chroot ${rootfs} /usr/sbin/update-rc.d -f hwclock.sh disable
-    chroot ${rootfs} /usr/sbin/update-rc.d -f hwclockfirst.sh disable
+    # disable pointless services in a container, only if they are installed
+    [ -f ${rootfs}/etc/init.d/checkroot.sh ] && chroot ${rootfs} /usr/sbin/update-rc.d -f checkroot.sh disable
+    [ -f ${rootfs}/etc/init.d/umountfs ] && chroot ${rootfs} /usr/sbin/update-rc.d -f umountfs disable
+    [ -f ${rootfs}/etc/init.d/hwclock.sh ] && chroot ${rootfs} /usr/sbin/update-rc.d -f hwclock.sh disable
+    [ -f ${rootfs}/etc/init.d/hwclockfirst.sh ] && chroot ${rootfs} /usr/sbin/update-rc.d -f hwclockfirst.sh disable
 
     # set initial timezone as on host
     if [ -f /etc/timezone ]; then
