@@ -225,7 +225,7 @@ get_image_name() {
     deb_release=$(echo ${version} | cut -d "-" -f 2)
 
     case "${deb_release}" in
-        squeeze) deb_version="debian-6";;
+        squeeze) fatal "release version ${version} is no longer supported"
         wheezy)  deb_version="debian-7";;
         jessie)  deb_version="debian-8";;
         stretch) deb_version="debian-9";;
@@ -518,7 +518,7 @@ type debootstrap
 release=$(echo ${version} | cut -d "-" -f 2)
 host_release=$( lsb_release | awk '/^Codename:/ { print $2; }')
 release=${release:-${host_release}}
-valid_releases=('squeeze' 'wheezy' 'jessie' 'stretch' 'sid')
+valid_releases=('wheezy' 'jessie' 'stretch' 'sid')
 if [[ ! "${valid_releases[*]}" =~ (^|[^[:alpha:]])$release([^[:alpha:]]|$) ]]; then
     echo "Invalid release ${release}, valid ones are: ${valid_releases[*]}"
     exit 1
