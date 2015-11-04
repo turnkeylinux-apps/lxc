@@ -387,10 +387,16 @@ EOF
 
     # If the container isn't running a native architecture, setup multiarch
     if [ "${arch}" != "${hostarch}" ]; then
-        chroot ${rootfs} dpkg --add-architecture ${hostarch}
-        # Write a new sources.list containing multiarch entries
-        write_sourceslist ${rootfs} ${release} ${arch}
-        write_sourceslist ${rootfs} ${release} ${hostarch}
+        # Test if dpkg supports multiarch
+        if ! chroot $rootfs dpkg --print-foreign-architectures 2>&1; then
+            chroot ${rootfs} dpkg --add-architecture ${hostarch}
+            # Write a new sources.list containing multiarch entries
+            write_sourceslist ${rootfs} ${release} ${arch}
+            write_sourceslist ${rootfs} ${release} ${hostarch}
+        else
+            # Write a new sources.list containing native entries
+            write_sourceslist ${rootfs} ${release}
+        fi
     else
         # Write a new sources.list containing native entries
         write_sourceslist ${rootfs} ${release}
