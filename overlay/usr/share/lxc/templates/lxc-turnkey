@@ -225,7 +225,7 @@ get_image_name() {
     deb_release=$(echo ${version} | cut -d "-" -f 2)
 
     case "${deb_release}" in
-        squeeze) fatal "release version ${version} is no longer supported"
+        squeeze) fatal "release version ${version} is no longer supported";;
         wheezy)  deb_version="debian-7";;
         jessie)  deb_version="debian-8";;
         stretch) deb_version="debian-9";;
