@@ -282,8 +282,8 @@ configure_turnkey() {
     info "inserting inithooks.conf..."
     cp ${inithooks} ${rootfs}/etc/inithooks.conf
 
-    info "enabling firstlogin inithook..."
-    chmod +x ${rootfs}/usr/lib/inithooks/firstboot.d/30turnkey-init-firstlogin
+    info "enabling rootpass inithook..."
+    chmod +x ${rootfs}/usr/lib/inithooks/firstboot.d/30rootpass
 
     info "tagging build..."
     version=$(cat ${rootfs}/etc/turnkey_version)
