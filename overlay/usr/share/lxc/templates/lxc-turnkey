@@ -343,7 +343,6 @@ copy_configuration() {
     ## Add all the includes
     echo "" >> ${path}/config
     echo "# Common configuration" >> ${path}/config
-    echo ""lxc.aa_profile = lxc-container-default-with-mounting"" >> ${path}/config
     if [ -e "${LXC_TEMPLATE_CONFIG}/turnkey.common.conf" ]; then
         echo "lxc.include = ${LXC_TEMPLATE_CONFIG}/turnkey.common.conf" >> ${path}/config
     fi
