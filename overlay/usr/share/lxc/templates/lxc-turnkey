@@ -62,7 +62,7 @@ configure_debian() {
 
     # configure the inittab
     cat <<EOF > ${rootfs}/etc/inittab
-id:3:initdefault:
+id:2:initdefault:
 si::sysinit:/etc/init.d/rcS
 l0:0:wait:/etc/init.d/rc 0
 l1:1:wait:/etc/init.d/rc 1
