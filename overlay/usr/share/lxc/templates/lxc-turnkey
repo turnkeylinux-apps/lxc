@@ -149,19 +149,19 @@ write_sourceslist() {
     fi
 
     cat >> "${rootfs}/etc/apt/sources.list.d/sources.list" << EOF
-${prefix} $ARCHIVE_MIRROR ${release} main
+${prefix} $ARCHIVE_MIRROR ${deb_release} main
 
-${prefix} $MIRROR ${release} main
-${prefix} $MIRROR ${release} contrib
-#${prefix} $MIRROR ${release} non-free
+${prefix} $MIRROR ${deb_release} main
+${prefix} $MIRROR ${deb_release} contrib
+#${prefix} $MIRROR ${deb_release} non-free
 EOF
 
     cat >> "${rootfs}/etc/apt/sources.list.d/security.sources.list" << EOF
-${prefix} $ARCHIVE_MIRROR ${release}-security main
+${prefix} $ARCHIVE_MIRROR ${deb_release}-security main
 
-${prefix} $SECURITY_MIRROR ${release}/updates main
-${prefix} $SECURITY_MIRROR ${release}/updates contrib
-#${prefix} $SECURITY_MIRROR ${release}/updates non-free
+${prefix} $SECURITY_MIRROR ${deb_release}/updates main
+${prefix} $SECURITY_MIRROR ${deb_release}/updates contrib
+#${prefix} $SECURITY_MIRROR ${deb_release}/updates non-free
 EOF
 }
 
@@ -217,20 +217,10 @@ cleanup() {
 }
 
 get_image_name() {
-    local app_name=$1
-    local version=$2
-    local arch=$3
-
-    tkl_version=$(echo ${version} | cut -d "-" -f 1)
-    deb_release=$(echo ${version} | cut -d "-" -f 2)
-
-    case "${deb_release}" in
-        squeeze) fatal "release version ${version} is no longer supported";;
-        wheezy)  deb_version="debian-7";;
-        jessie)  deb_version="debian-8";;
-        stretch) deb_version="debian-9";;
-        *)       fatal "debian release not recognized: ${deb_release}"
-    esac
+    local deb_version=$1
+    local app_name=$2
+    local tkl_version=$3
+    local arch=$4
 
     name="${deb_version}-turnkey-${app_name}_${tkl_version}-1_${arch}.tar.gz"
     echo ${name}
@@ -298,9 +288,11 @@ configure_turnkey() {
         echo ${aptconf} > ${rootfs}/etc/apt/apt.conf.d/01proxy
     fi
 
-    # Some older images need newer versions of dpkg and apt to support multiarch
+    # Some older images need newer versions of dpkg to support multiarch
     DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy update
     DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy install --force-yes --no-install-recommends dpkg debian-archive-keyring
+    # Remove old, unneeded packages
+    DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy autoremove
 }
 
 install_turnkey() {
@@ -346,8 +338,8 @@ copy_configuration() {
     if [ -e "${LXC_TEMPLATE_CONFIG}/turnkey.common.conf" ]; then
         echo "lxc.include = ${LXC_TEMPLATE_CONFIG}/turnkey.common.conf" >> ${path}/config
     fi
-    if [ -e "${LXC_TEMPLATE_CONFIG}/turnkey.${release}.conf" ]; then
-        echo "lxc.include = ${LXC_TEMPLATE_CONFIG}/turnkey.${release}.conf" >> ${path}/config
+    if [ -e "${LXC_TEMPLATE_CONFIG}/turnkey.${deb_release}.conf" ]; then
+        echo "lxc.include = ${LXC_TEMPLATE_CONFIG}/turnkey.${deb_release}.conf" >> ${path}/config
     fi
 
     ## Add the container-specific config
@@ -396,15 +388,15 @@ EOF
         if ! chroot $rootfs dpkg --print-foreign-architectures 2>&1; then
             chroot ${rootfs} dpkg --add-architecture ${hostarch}
             # Write a new sources.list containing multiarch entries
-            write_sourceslist ${rootfs} ${release} ${arch}
-            write_sourceslist ${rootfs} ${release} ${hostarch}
+            write_sourceslist ${rootfs} ${deb_release} ${arch}
+            write_sourceslist ${rootfs} ${deb_release} ${hostarch}
         else
             # Write a new sources.list containing native entries
-            write_sourceslist ${rootfs} ${release}
+            write_sourceslist ${rootfs} ${deb_release}
         fi
     else
         # Write a new sources.list containing native entries
-        write_sourceslist ${rootfs} ${release}
+        write_sourceslist ${rootfs} ${deb_release}
     fi
 
     # Re-enable service startup
@@ -521,19 +513,29 @@ case "${arch}" in
         *)   fatal "appliance architecture not supported: ${arch}" ;;
 esac
 
-[ $hostarch = "i386" -a ${arch} = "amd64" ] && fatal "can't create ${arch} container on $hostarch"
+[ ${hostarch} = "i386" -a ${arch} = "amd64" ] && fatal "can't create ${arch} container on ${hostarch}"
 
 type debootstrap
 [ $? -ne 0 ] && fatal "'debootstrap' command is missing"
 
-release=$(echo ${version} | cut -d "-" -f 2)
-host_release=$( lsb_release | awk '/^Codename:/ { print $2; }')
-release=${release:-${host_release}}
-valid_releases=('wheezy' 'jessie' 'stretch' 'sid')
-if [[ ! "${valid_releases[*]}" =~ (^|[^[:alpha:]])$release([^[:alpha:]]|$) ]]; then
-    echo "Invalid release ${release}, valid ones are: ${valid_releases[*]}"
+case "${version}" in
+    12.[0-1]-squeeze) fatal "turnkey version ${version} is no longer supported:";;
+    13.0-wheezy)      deb_version="debian-7";;
+    14.[0-9]-jessie)  deb_version="debian-8";;
+    15.[0-9]-stretch) deb_version="debian-9";;
+                   *) fatal "turnkey version ${version} is not recognized:"
+esac
+
+tkl_version=$(echo ${version} | cut -d "-" -f 1)
+deb_release=$(echo ${version} | cut -d "-" -f 2)
+
+valid_releases=('wheezy' 'jessie' 'stretch')
+if [[ ! "${valid_releases[*]}" =~ (^|[^[:alpha:]])${deb_release}([^[:alpha:]]|$) ]]; then
+    echo "Invalid release ${deb_release}, valid ones are: ${valid_releases[*]}"
     exit 1
 fi
+
+[ ${arch} = "i386" -a ${tkl_version} != "13.0" ] && fatal "can't create ${arch} container with ${version}"
 
 # detect rootfs
 config="${path}/config"
@@ -546,7 +548,7 @@ if [ -z "${rootfs}" ]; then
     rootfs=${rootfs:-${path}/rootfs}
 fi
 
-image=$(get_image_name ${app_name} ${version} ${arch})
+image=$(get_image_name ${deb_version} ${app_name} ${tkl_version} ${arch})
 
 install_turnkey ${image} ${rootfs}
 [ $? -ne 0 ] && fatal "failed to install turnkey ${app_name}"
@@ -563,7 +565,7 @@ copy_configuration ${path} ${rootfs} ${name} ${arch}
 configure_debian_systemd ${path} ${rootfs}
 [ $? -ne 0 ] && fatal "failed to configure systemd"
 
-post_process ${rootfs} ${release} ${arch} ${hostarch}
+post_process ${rootfs} ${deb_release} ${arch} ${hostarch}
 [ $? -ne 0 ] && fatal "failed post-processing"
 
 # completed
