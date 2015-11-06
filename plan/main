@@ -21,4 +21,5 @@ yum
 /* required for ansible compatibility */
 aptitude
 python-apt
+python-httplib2
 bzip2
