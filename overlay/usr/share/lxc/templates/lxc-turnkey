@@ -300,7 +300,7 @@ configure_turnkey() {
 
     # Some older images need newer versions of dpkg and apt to support multiarch
     DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy update
-    DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy install --force-yes --no-install-recommends dpkg apt debian-archive-keyring
+    DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy install --force-yes --no-install-recommends dpkg debian-archive-keyring
 }
 
 install_turnkey() {
