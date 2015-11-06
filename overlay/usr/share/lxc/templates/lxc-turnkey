@@ -344,11 +344,11 @@ copy_configuration() {
     echo "" >> ${path}/config
     echo "# Common configuration" >> ${path}/config
     echo ""lxc.aa_profile = lxc-container-default-with-mounting"" >> ${path}/config
-    if [ -e "${LXC_TEMPLATE_CONFIG}/debian.common.conf" ]; then
-        echo "lxc.include = ${LXC_TEMPLATE_CONFIG}/debian.common.conf" >> ${path}/config
+    if [ -e "${LXC_TEMPLATE_CONFIG}/turnkey.common.conf" ]; then
+        echo "lxc.include = ${LXC_TEMPLATE_CONFIG}/turnkey.common.conf" >> ${path}/config
     fi
-    if [ -e "${LXC_TEMPLATE_CONFIG}/debian.${release}.conf" ]; then
-        echo "lxc.include = ${LXC_TEMPLATE_CONFIG}/debian.${release}.conf" >> ${path}/config
+    if [ -e "${LXC_TEMPLATE_CONFIG}/turnkey.${release}.conf" ]; then
+        echo "lxc.include = ${LXC_TEMPLATE_CONFIG}/turnkey.${release}.conf" >> ${path}/config
     fi
 
     ## Add the container-specific config
