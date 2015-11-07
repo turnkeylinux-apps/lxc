@@ -241,10 +241,18 @@ download_image() {
     wget --read-timeout=10 -t 3 -c ${imagesurl}/${image} -O ${cache}/${image}.tmp
     if [ $? -ne 0 ]; then
         cleanup ${cache} ${image}
-        fatal "failed to download \'${image}\'"
+        fatal "failed to download '${image}'"
     else
         mv ${cache}/${image}.tmp ${cache}/${image}
-        return $?
+        wget --read-timeout=10 -t 3 -c ${imagesurl}/${image}.sig -O ${cache}/${image}.sig
+        #  TODO: uncomment the following lines when v14.0 signature files
+        #        have been updated and the logic tested
+        #  2)    change the logic to verify signature when extracting from cache
+        #if [ -f ${cache}/${image}.sig ]; then
+        #  gpg --verify ${cache}/${image}.sig ${cache}/${image}
+        #  [ $? -ne 0 ] && fatal "gpg signature failure '${image}'"
+        #fi
+        return 0
     fi
 }
 
