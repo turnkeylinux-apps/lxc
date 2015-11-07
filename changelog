@@ -1,4 +1,12 @@
-turnkey-lxc-13.0 (1) turnkey; urgency=low
+turnkey-lxc-14.0 (1) turnkey; urgency=low
+
+  * v14.0 release
+
+    - Latest upstream version of LXC
+    - Let lxc-create handle network configuration (-f option)
+    - Use Proxmox images for v14.x containers
+    - Use Openvz images for v13.0 containers
+    - Verify gpg signatures of downloaded images
 
   * Initial public release of TurnKey LXC.
 
