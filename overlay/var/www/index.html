@@ -37,6 +37,7 @@
                 <li><a href="#cp"><span>Control Panel</span></a></li>
                 <li><a href="#bridge"><span>Example (Bridge)</span></a></li>
                 <li><a href="#nat"><span>Example (NAT)</span></a></li>
+                <li><a href="#usage"><span>Usage</span></a></li>
             </ul>
 
             <div id="cp">
@@ -74,10 +75,11 @@ export SEC_UPDATES=FORCE
 </pre>
 
                     <h3>Create LXC container</h3>
-                    <pre>lxc-create -n wp1 -t turnkey -- wordpress -i /root/wp1.conf</pre>
+                    <pre>lxc-create -n wp1 -f /etc/lxc/bridge.conf -t turnkey -- wordpress -i /root/wp1.conf</pre>
 
                     <h3>Start the container in the background</h3>
                     <pre>lxc-start -n wp1 -d</pre>
+                    Note: options have changed since v13.0
 </pre>
                 </div>
             </div>
@@ -94,7 +96,7 @@ export SEC_UPDATES=FORCE
 </pre>
 
                     <h3>Create LXC container</h3>
-                    <pre>lxc-create -n wp1 -t turnkey -- wordpress -i /root/wp1.conf -l natbr0</pre>
+                    <pre>lxc-create -n wp1 -f /etc/lxc/natbridge.conf -t turnkey -- wordpress -i /root/wp1.conf</pre>
 
                     <h3>Start the container in the background</h3>
                     <pre>lxc-start -n wp1 -d</pre>
@@ -105,6 +107,39 @@ export SEC_UPDATES=FORCE
                     <h3>Expose the container SSH service</h3>
                     <pre>ipaddr=$(host wp1 | cut -d " " -f 4)
 iptables-nat add 2222 $ipaddr:22
+</pre>
+                    Note: options have changed since v13.0
+                </div>
+            </div>
+            <div id="usage">
+                <div class="fragment-content">
+                    <h3>Usage:</h3>
+                    <pre>TurnKey LXC Template Syntax: appname [options]
+ 
+Arguments::
+ 
+    appname          Appliance name (e.g., core)
+ 
+Options::
+ 
+    -a --arch=       Appliance architecture (default: hosts architecture)
+    -v --version=    Appliance version (default: 14.0-jessie)
+    -x --aptproxy=   Address of APT Proxy (e.g., http://192.168.121.1:3142)
+ 
+    -i --inithooks=  Path to inithooks.conf (default: /root/inithooks.conf)
+                     Reference: http://www.turnkeylinux.org/docs/inithooks
+ 
+       --rootfs=     Path to root filesystem (default: ${path}/${name}/rootfs)
+    -c --clean       Clean the cache i.e. purge all downloaded appliance images
+ 
+Required options (passed automatically by lxc-create):
+ 
+    -n --name=       container name (${name})
+    -p --path=       container path (${path}/${name})
+ 
+Example usage::
+ 
+    lxc-create -n core -t turnkey -- core -i /root/inithooks.conf
 </pre>
                 </div>
             </div>
