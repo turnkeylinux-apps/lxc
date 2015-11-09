@@ -208,11 +208,41 @@ configure_debian_systemd() {
     return 0
 }
 
+verify_signature() {
+    local cache=$1
+    local image=$2
+    local sig=${cache}/${image}.sig
+    local keyid="A16EB94D"
+    local keyring="/etc/apt/trusted.gpg.d/turnkey.gpg"
+
+    if [[ "${image}" =~ "debian-7" ]]; then
+        info "verifying image..."
+        gpg --keyring ${keyring} --verify ${sig} ${cache}/${image}
+    else
+        info "verifying gpg signature..."
+        gpg --keyring ${keyring} --verify ${sig}
+        if [ $? -ne 0 ]; then  
+            fatal "${image}.sig gpg verification failed"
+        fi
+
+        info "verifying checksum..."
+        sum1=$(sha1sum  ${cache}/${image} | cut -d " " -f 1)
+        sum2=$(grep -A 1 sha1sum ${sig} | tail -n 1 | sed "s/^ *//")
+        if [ ! "$sum1" == "$sum2" ]; then
+            fatal "${image} checksum verification failed"
+        fi
+    fi
+
+    info "verified successfully"
+    return 0
+}
+
 cleanup() {
     local cache=$1
     local image=$2
 
     rm -rf ${cache}/${image}.tmp
+    rm -rf ${cache}/${image}.sig
     rm -rf ${cache}/${image}
 }
 
@@ -245,14 +275,7 @@ download_image() {
     else
         mv ${cache}/${image}.tmp ${cache}/${image}
         wget --read-timeout=10 -t 3 -c ${imagesurl}/${image}.sig -O ${cache}/${image}.sig
-        #  TODO: uncomment the following lines when v14.0 signature files
-        #        have been updated and the logic tested
-        #  2)    change the logic to verify signature when extracting from cache
-        #if [ -f ${cache}/${image}.sig ]; then
-        #  gpg --verify ${cache}/${image}.sig ${cache}/${image}
-        #  [ $? -ne 0 ] && fatal "gpg signature failure '${image}'"
-        #fi
-        return 0
+        return $?
     fi
 }
 
@@ -260,6 +283,11 @@ extract_image() {
     local cache=$1
     local image=$2
     local rootfs=$3
+
+    # if signature file exists, verify image
+    if [ -f ${cache}/${image}.sig ]; then
+        verify_signature ${cache} ${image}
+    fi
 
     info "extracting appliance image..."
     mkdir -p ${rootfs}
