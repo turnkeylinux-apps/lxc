@@ -47,9 +47,21 @@ site_available=/etc/nginx/sites-available/$domain
 [ -e "$site_available" ] && fatal "already exists: $site_available"
 [ -e "$container_rootfs" ] || fatal "does not exist: $container_rootfs"
 
+container_cert="etc/ssl/certs/cert.crt"
+container_key="etc/ssl/certs/cert.key"
+# note: must use actual locations because symlink outside container
+#       points to host cert, not container cert
+[ -f "${container_rootfs}/${container_cert}" ] || container_cert="usr/local/share/ca-certificates/cert.crt"
+[ -f "${container_rootfs}/${container_key}" ] ||  container_key="etc/ssl/private/cert.key"
+[ -f "${container_rootfs}/${container_cert}" ] || fatal "can't find $container cert"
+[ -f "${container_rootfs}/${container_key}" ] ||  fatal "can't find $container key"
+
 cp $template $site_available
 sed -i "s|DOMAIN|$domain|" $site_available
 sed -i "s|CONTAINER|$container|" $site_available
+sed -i "s|CERT|${container_cert}|" $site_available
+sed -i "s|KEY|${container_key}|" $site_available
+
 ln -s $site_available $site_enabled
 /etc/init.d/nginx reload
 
