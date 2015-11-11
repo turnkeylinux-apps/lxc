@@ -480,17 +480,17 @@ Options::
     -i --inithooks=  Path to inithooks.conf (default: /root/inithooks.conf)
                      Reference: http://www.turnkeylinux.org/docs/inithooks
 
-       --rootfs=     Path to root filesystem (default: \${path}/\${name}/rootfs)
+       --rootfs=     Path to root filesystem (default: \$path/\$name/rootfs)
     -c --clean       Clean the cache i.e. purge all downloaded appliance images
 
 Required options (passed automatically by lxc-create):
 
-    -n --name=       container name (\${name})
-    -p --path=       container path (\${path}/\${name})
+    -n --name=       container name (\$name)
+    -p --path=       container path_name (\$path/\$name)
 
 Example usage::
 
-    lxc-create -n core -t turnkey -- core -i /root/inithooks.conf
+    lxc-create -n core -f /etc/lxc/bridge.conf -t turnkey -- core -i /root/inithooks.conf
 
 EOF
     exit 1

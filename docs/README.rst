@@ -4,7 +4,7 @@ Usage
 Creating a TurnKey LXC container is done by specifying ``turnkey`` as
 the template when invoking ``lxc-create``, for example::
 
-    # lxc-create -n CONTAINER_NAME -t turnkey -f CONFIG_FILE
+    # lxc-create -n CONTAINER_NAME -f CONFIG_FILE -t turnkey
 
 The TurnKey LXC template has required and optional arguments.
 ``lxc-create`` will pass the arguments specified after a double dash to
@@ -27,17 +27,17 @@ the template. For example, to show the templates usage we could run::
         -i --inithooks=  Path to inithooks.conf (default: /root/inithooks.conf)
                          Reference: http://www.turnkeylinux.org/docs/inithooks
 
-           --rootfs=     Path to root filesystem (default: ${path}/${name}/rootfs)
+           --rootfs=     Path to root filesystem (default: $path/$name/rootfs)
         -c --clean       Clean the cache i.e. purge all downloaded appliance images
 
     Required options (passed automatically by lxc-create):
 
-        -n --name=       container name (${name})
-        -p --path=       container path (${path}/${name})
+        -n --name=       container name ($name)
+        -p --path=       container path_name ($path/$name)
 
     Example usage::
 
-        lxc-create -n core -t turnkey -- core -i /root/inithooks.conf
+        lxc-create -n core -f /etc/lxc/bridge.conf -t turnkey -- core -i /root/inithooks.conf
 
 Inithooks (preseeding)
 ----------------------
@@ -97,11 +97,28 @@ itself, but not the network. In order to expose the containers services
 to the network, the host can be configured to proxy and/or forward
 traffic to the container based on a set of rules.
 
-Creating a container (wordpress, NAT)
+Creating a container (wordpress, bridged)
 -------------------------------------
 
 Continuing from the earlier inithooks example, we'll create a TurnKey
-Wordpress container. We'll also use the NAT bridge as it requires some
+Wordpress container using the bridged network configuration.
+
+1. Create the container::
+
+    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress -i /root/inithooks.conf
+    
+    This could have been shortened because -i|--inithooks now defaults to /root/inithooks.conf
+    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress
+    
+2. Start the container in the background::
+
+    # lxc-start -n wp1 -d
+
+Creating a container (wordpress, NAT)
+-------------------------------------
+
+Now we'll create a second TurnKey Wordpress container. 
+We'll also use the NAT bridge as it requires some
 extra steps to expose the containers services to the network.
 
 Additionally, we'll also specify an APT proxy (preconfigured on the 
@@ -109,28 +126,29 @@ TurnKey LXC appliance) so other containers can leverage the cache.
 
 1. Create the container::
 
-    # lxc-create -n wp1 -t turnkey -- wordpress -i /root/inithooks.conf -x http://192.168.121.1:3142
-    This could have been shortened to:
-    # lxc-create -n wp1 -t turnkey -- wordpress -x http://192.168.121.1:3142
-    Because -i|--inithooks now defaults to /root/inithooks.conf
+    # lxc-create -n wp2 -f /etc/lxc/natbridge.conf -t turnkey -- wordpress -i /root/inithooks.conf -x http://192.168.121.1:3142
+    
+    This could have been shortened because natbridge.conf is the default config and inithooks defaults to /root/inithooks.conf
+    # lxc-create -n wp2 -t turnkey -- wordpress -x http://192.168.121.1:3142
+
 
 2. Start the container in the background::
 
-    # lxc-start -n wp1 -d
+    # lxc-start -n wp2 -d
 
 3. Expose the containers web services to the network by creating an
    nginx site configuration to proxy all web requests (ports 80, 443,
    12320, 12321, 12322) destined for www.example.com to the container on
    the corresponding ports::
 
-    # nginx-proxy www.example.com wp1
+    # nginx-proxy www.example.com wp2
 
 4. Expose the containers SSH service to the network by configuring
    iptables on the host to forward the traffic it receives on port 2222
    to the container on port 22::
 
-    # host wp1
-    wp1 has address 192.168.121.165
+    # host wp2
+    wp2 has address 192.168.121.165
 
     # iptables-nat add 2222 192.168.121.165:22
 
