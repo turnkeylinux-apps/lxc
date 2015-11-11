@@ -4,13 +4,13 @@ Usage
 Creating a TurnKey LXC container is done by specifying ``turnkey`` as
 the template when invoking ``lxc-create``, for example::
 
-    # lxc-create -n CONTAINER_NAME -t turnkey
+    # lxc-create -n CONTAINER_NAME -t turnkey -f CONFIG_FILE
 
 The TurnKey LXC template has required and optional arguments.
 ``lxc-create`` will pass the arguments specified after a double dash to
 the template. For example, to show the templates usage we could run::
 
-    # lxc-create -n CONTAINER_NAME -t turnkey -- --help
+    # lxc-create -n CONTAINER_NAME -t turnkey  -- --help
 
     TurnKey LXC Template Syntax: appname [options]
 
@@ -21,15 +21,19 @@ the template. For example, to show the templates usage we could run::
     Options::
 
         -a --arch=       Appliance architecture (default: hosts architecture)
-        -v --version=    Appliance version (default: 13.0-wheezy)
-        -c --cachedir=   Path to appliance cache (default: /var/cache/lxc/turnkey)
+        -v --version=    Appliance version (default: 14.0-jessie)
         -x --aptproxy=   Address of APT Proxy (e.g., http://192.168.121.1:3142)
 
-        -i --inithooks=  Path to inithooks.conf (e.g., /root/inithooks.conf)
+        -i --inithooks=  Path to inithooks.conf (default: /root/inithooks.conf)
                          Reference: http://www.turnkeylinux.org/docs/inithooks
 
-        -l --netlink=    Value of lxc.network.link (default: br0)
-                         Specify none to omit network configuration
+           --rootfs=     Path to root filesystem (default: ${path}/${name}/rootfs)
+        -c --clean       Clean the cache i.e. purge all downloaded appliance images
+
+    Required options (passed automatically by lxc-create):
+
+        -n --name=       container name (${name})
+        -p --path=       container path (${path}/${name})
 
     Example usage::
 
@@ -59,7 +63,12 @@ Networking (bridged vs. NAT)
 ----------------------------
 
 TurnKey LXC supports two networking configurations out of the box,
-bridged and NAT.
+bridged and NAT. Starting in v14.0, the TurnKey LXC template follows the
+convention established by other templates and lets lxc-create control
+the network configuration through the '-f <config_file>' option.
+For convenience, two preconfigured files are provided, /etc/lxc/bridge.conf,
+and /etc/lxc/natbridge.conf. The NAT bridge configuration is now the default,
+when no config file is specified.
 
 Bridged (br0)
 '''''''''''''
@@ -69,8 +78,8 @@ would be bridged, in which case the container would be allocated an IP
 address on the network (via DHCP), and all its services (e.g., SSH, Web
 server, etc.) would be accessible directly.
 
-NAT (natbr0)
-''''''''''''
+NAT (natbr0) (default)
+''''''''''''''''''''''
 
 On the other hand, when deployed in a virtual environment (e.g.,
 VirtualBox) which itself is using a bridged interface, bridging a bridge
@@ -100,7 +109,10 @@ TurnKey LXC appliance) so other containers can leverage the cache.
 
 1. Create the container::
 
-    # lxc-create -n wp1 -t turnkey -- wordpress -i /root/inithooks.conf -l natbr0 -x http://192.168.121.1:3142
+    # lxc-create -n wp1 -t turnkey -- wordpress -i /root/inithooks.conf -x http://192.168.121.1:3142
+    This could have been shortened to:
+    # lxc-create -n wp1 -t turnkey -- wordpress -x http://192.168.121.1:3142
+    Because -i|--inithooks now defaults to /root/inithooks.conf
 
 2. Start the container in the background::
 
@@ -114,7 +126,7 @@ TurnKey LXC appliance) so other containers can leverage the cache.
     # nginx-proxy www.example.com wp1
 
 4. Expose the containers SSH service to the network by configuring
-   iptables on the host to forward the traffic it recieves on port 2222
+   iptables on the host to forward the traffic it receives on port 2222
    to the container on port 22::
 
     # host wp1

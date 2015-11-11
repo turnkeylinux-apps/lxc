@@ -16,6 +16,7 @@ top of that:
     - Insert specified inithooks.conf into container for preseeding.
     - Supports configuration of network link (e.g., br0, natbr0, none).
     - Supports configuration of apt proxy.
+    - Verifies GPG signatures when available
     - Generic enough to be used on any LXC enabled distribution.
 
 - Easily expose NAT containers services:
@@ -26,7 +27,7 @@ top of that:
       domain to the container on the corresponding ports.
     - `iptables-nat`_: Expose a containers non-web (e.g., SSH) service
       to the network by configuring iptables on the host to forward the
-      traffic it recieves on port X to the container on port Y.
+      traffic it receives on port X to the container on port Y.
 
 - LXC appliance configurations:
 
