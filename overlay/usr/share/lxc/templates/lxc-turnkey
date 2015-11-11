@@ -511,14 +511,14 @@ inithooks="/root/inithooks.conf"
 
 while true; do
     case "$1" in
-        -h|--help)      usage;;
+        -h|--help)      usage; exit 1 ;;
         -p|--path)      path=$2; shift ;;
            --rootfs)    rootfs=$2; shift ;;
         -n|--name)      name=$2; shift ;;
         -i|--inithooks) inithooks=$2; shift ;;
         -x|--aptproxy)  aptproxy=$2; shift ;;
         -a|--arch)      arch=$2; shift ;;
-        -c|--clean)     clean='1' ;;
+        -c|--clean)     clean; exit 1 ;;
         -v|--version)   version=$2; shift ;;
         --)             app_name=$2; break ;;
         *)              fatal "unknown argument: $1" ;;
@@ -534,11 +534,6 @@ done
 [ -z "${path}" ]        && fatal "path parameter is required"
 [ -z "${name}" ]        && fatal "name parameter is required"
 [ -e "${inithooks}" ]   || fatal "inithooks not specified or does not exist"
-
-if [ ! -z "${clean}" -a -z "${path}" ]; then
-    clean || exit 1
-    exit 0
-fi
 
 case "${arch}" in
      i386)             ;;
