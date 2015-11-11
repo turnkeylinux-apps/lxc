@@ -1,0 +1,10 @@
+Metadata-Version: 1.0
+Name: lxc-python2
+Version: 0.1
+Summary: Python2 bindings for LXC
+Home-page: git://github.com/lxc/python2-lxc
+Author: lxc
+Author-email: lxc-devel@lists.linuxcontainers.org
+License: LGPLv2+
+Description: The lxc-python2 package contains lxc bindings for python2
+Platform: UNKNOWN
