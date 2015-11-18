@@ -26,7 +26,7 @@ the template. For example, to show the templates usage we could run::
         -x --aptproxy=   Address of APT Proxy (e.g., http://192.168.121.1:3142)
 
         -i --inithooks=  Path to inithooks.conf (e.g., /root/inithooks.conf)
-                         Reference: http://www.turnkeylinux.org/docs/inithooks
+                         Reference: https://www.turnkeylinux.org/docs/inithooks
 
         -l --netlink=    Value of lxc.network.link (default: br0)
                          Specify none to omit network configuration
@@ -123,5 +123,5 @@ TurnKey LXC appliance) so other containers can leverage the cache.
     # iptables-nat add 2222 192.168.121.165:22
 
 
-.. _inithooks: http://www.turnkeylinux.org/docs/inithooks
+.. _inithooks: https://www.turnkeylinux.org/docs/inithooks
 
