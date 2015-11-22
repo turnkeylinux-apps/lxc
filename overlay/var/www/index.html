@@ -106,18 +106,27 @@ EOF
                     <pre>lxc-start -n wp1 -d</pre>
 
                     <h3>Configure proxying web requests for domain to container</h3>
-                    <pre>nginx-proxy www.example.com wp1</pre>
+                    <pre>nginx-proxy --domain www.example.com --name wp1</pre>
 
                     <h3>Expose the container SSH service</h3>
                     <pre>ipaddr=$(host wp1 | cut -d " " -f 4)
 iptables-nat add 2222 $ipaddr:22
 </pre>
+
+                    <h3>Stop proxying web requests for domain to container</h3>
+                    <pre>nginx-proxy --remove -d www.example.com -n wp1</pre>
+
+                    <h3>Stop the container</h3>
+                    <pre>lxc-stop -k -n wp1</pre>
+
+                    <h3>Destroy the container</h3>
+                    <pre>lxc-destroy -f -n wp1</pre>
                     Note: options have changed since v13.0
                 </div>
             </div>
             <div id="usage">
                 <div class="fragment-content">
-                    <h3>Usage:</h3>
+                    <h3>Usage: TurnKey LXC Template</h3>
                     <pre>TurnKey LXC Template Syntax: appname [options]
  
 Arguments::
@@ -144,6 +153,50 @@ Required options (passed automatically by lxc-create):
 Example usage::
  
     lxc-create -n core -f /etc/lxc/bridge.conf -t turnkey -- core -i /root/inithooks.conf
+</pre>
+                    <h3>Usage: nginx-proxy</h3>
+                    <pre>nginx-proxy version 2.0: GNU General Public License version 3
+Create site configuration to proxy requests destined for domain to container
+
+Syntax: nginx-proxy [-d|--domain] domain [-n|--name] container [-r|--remove]
+
+Arguments::
+
+    domain           source domain
+    container        destination container name
+
+Options::
+
+    -h --help        usage: display this message
+    -d --domain      source domain
+    -n --name        container name
+    -r --remove      remove a proxy from domain to container
+    -c --check       indicate if any changes would be made
+
+Examples::
+
+    # create a proxy from domain 'www.example.com' to container 'wordpress' 
+    nginx-proxy --domain www.example.com --name wordpress
+
+    # remove a proxy from domain 'www.example.com' to container 'wordpress'
+    nginx-proxy --remove -d www.example.com -n wordpress
+
+    # run in check-mode making no changes, but indicating what would be changed
+    nginx-proxy --check -d www.example.com -n wordpress
+
+Exit Codes::
+
+        0            no changes were made or would have been made (check-mode)
+        1            changes were made or would have been made (check-mode)
+        2            fatal error prevented command completion
+
+Notes::
+
+    # also supports the v13.0 syntax
+    nginx-proxy www.example.com wordpress
+
+    # template (preconfigured for 80, 443, 12320, 12321, 12322)
+    /etc/nginx/sites-available/container.tmpl
 </pre>
                 </div>
             </div>

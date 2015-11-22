@@ -97,8 +97,61 @@ itself, but not the network. In order to expose the containers services
 to the network, the host can be configured to proxy and/or forward
 traffic to the container based on a set of rules.
 
+Usage: nginx-proxy
+''''''''''''''''''
+
+The 2.0 version of nginx-proxy has been updated to support the v14.0
+appliances and using lvm as a backing store. Actually any form of backing
+store should work, but only dir and lvm have been tested. Some new options
+have been added to make it easier to cleanup when containers are removed
+and to better support the Ansible appliance.
+
+    nginx-proxy version 2.0: GNU General Public License version 3
+    Create site configuration to proxy requests destined for domain to container
+    
+    Syntax: nginx-proxy [-d|--domain] domain [-n|--name] container [-r|--remove]
+    
+    Arguments::
+    
+        domain           source domain
+        container        destination container name
+    
+    Options::
+    
+        -h --help        usage: display this message
+        -d --domain      source domain
+        -n --name        container name
+        -r --remove      remove a proxy from domain to container
+        -c --check       indicate if any changes would be made
+    
+    Examples::
+    
+        # create a proxy from domain 'www.example.com' to container 'wordpress' 
+        nginx-proxy --domain www.example.com --name wordpress
+    
+        # remove a proxy from domain 'www.example.com' to container 'wordpress'
+        nginx-proxy --remove -d www.example.com -n wordpress
+    
+        # run in check-mode making no changes, but indicating what would be changed
+        nginx-proxy --check -d www.example.com -n wordpress
+    
+    Exit Codes::
+    
+            0            no changes were made or would have been made (check-mode)
+            1            changes were made or would have been made (check-mode)
+            2            fatal error prevented command completion
+    
+    Notes::
+    
+        # also supports the v13.0 syntax
+        nginx-proxy www.example.com wordpress
+    
+        # template (preconfigured for 80, 443, 12320, 12321, 12322)
+        /etc/nginx/sites-available/container.tmpl
+    
+
 Creating a container (wordpress, bridged)
--------------------------------------
+-----------------------------------------
 
 Continuing from the earlier inithooks example, we'll create a TurnKey
 Wordpress container using the bridged network configuration.
@@ -112,7 +165,7 @@ Wordpress container using the bridged network configuration.
     
 2. Start the container in the background::
 
-    # lxc-start -n wp1 -d
+    # lxc-start -d -n wp1
 
 Creating a container (wordpress, NAT)
 -------------------------------------
@@ -134,14 +187,14 @@ TurnKey LXC appliance) so other containers can leverage the cache.
 
 2. Start the container in the background::
 
-    # lxc-start -n wp2 -d
+    # lxc-start -d -n wp2
 
 3. Expose the containers web services to the network by creating an
    nginx site configuration to proxy all web requests (ports 80, 443,
    12320, 12321, 12322) destined for www.example.com to the container on
    the corresponding ports::
 
-    # nginx-proxy www.example.com wp2
+    # nginx-proxy --domain www.example.com --name wp2
 
 4. Expose the containers SSH service to the network by configuring
    iptables on the host to forward the traffic it receives on port 2222
@@ -152,6 +205,34 @@ TurnKey LXC appliance) so other containers can leverage the cache.
 
     # iptables-nat add 2222 192.168.121.165:22
 
+Removing a container (wordpress, NAT)
+-------------------------------------
+
+Now we'll remove the container, wp2, we just created.
+
+1. Stop the proxy from forwarding requests to the container.
+
+    # nginx-proxy --remove -d www.example.com -n wp2
+
+   Note that both domain and container name must be specified when
+   removing a proxy. This is because multiple domains may be forwarded
+   to the same container.
+
+2. Remove the iptables NAT.
+
+    # iptables-nat del 2222 192.168.121.165:22
+
+3. Stop the container.
+
+    # lxc-stop -k -n wp2
+
+4. Destroy the container.
+
+    # lxc-destroy -n wp2
+
+   or combine steps three and four
+
+    # lxc-destroy -f -n wp2
 
 .. _inithooks: http://www.turnkeylinux.org/docs/inithooks
 
