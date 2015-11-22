@@ -42,6 +42,12 @@ top of that:
     - Includes example inithooks configuration for preseeding (convenience).
     - IP forwarding and control groups enabled.
 
+- LXC limitations:
+
+    - The LXC appliance cannot run in nested mode i.e. within an LXC container
+      without additional configuration. This mode is not recommended for
+      production systems because of security concerns.
+
 See the `Usage documentation`_ for further details.
 
 Credentials *(passwords set at first boot)*

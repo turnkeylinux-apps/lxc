@@ -8,6 +8,7 @@ turnkey-lxc-14.0 (1) turnkey; urgency=low
     - Use Openvz images for v13.0 containers
     - Verify gpg signatures of downloaded images
     - Added support for default lvm volume group 'turnkey'
+    - Updated nginx-proxy to support v14.0 certs and lvm backing store
     - Allows Ansible appliance to manage LXC containers
 
   * Initial public release of TurnKey LXC.
