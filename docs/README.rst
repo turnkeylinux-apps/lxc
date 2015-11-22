@@ -104,7 +104,7 @@ The 2.0 version of nginx-proxy has been updated to support the v14.0
 appliances and using lvm as a backing store. Actually any form of backing
 store should work, but only dir and lvm have been tested. Some new options
 have been added to make it easier to cleanup when containers are removed
-and to better support the Ansible appliance.
+and to better support the Ansible appliance. ::
 
     nginx-proxy version 2.0: GNU General Public License version 3
     Create site configuration to proxy requests destined for domain to container
@@ -210,7 +210,7 @@ Removing a container (wordpress, NAT)
 
 Now we'll remove the container, wp2, we just created.
 
-1. Stop the proxy from forwarding requests to the container.
+1. Stop the proxy from forwarding requests to the container::
 
     # nginx-proxy --remove -d www.example.com -n wp2
 
@@ -218,19 +218,19 @@ Now we'll remove the container, wp2, we just created.
    removing a proxy. This is because multiple domains may be forwarded
    to the same container.
 
-2. Remove the iptables NAT.
+2. Remove the iptables NAT::
 
     # iptables-nat del 2222 192.168.121.165:22
 
-3. Stop the container.
+3. Stop the container::
 
     # lxc-stop -k -n wp2
 
-4. Destroy the container.
+4. Destroy the container::
 
     # lxc-destroy -n wp2
 
-   or combine steps three and four
+   or combine steps three and four::
 
     # lxc-destroy -f -n wp2
 
