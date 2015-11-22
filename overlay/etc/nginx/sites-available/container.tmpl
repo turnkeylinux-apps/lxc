@@ -13,8 +13,8 @@ server {
     server_name DOMAIN;
 
     include /etc/nginx/include/ssl;
-    ssl_certificate /var/lib/lxc/CONTAINER/rootfs/CERT;
-    ssl_certificate_key /var/lib/lxc/CONTAINER/rootfs/KEY;
+    ssl_certificate CERT;
+    ssl_certificate_key KEY;
 
     location / {
         include /etc/nginx/include/proxy;
@@ -27,8 +27,8 @@ server {
     server_name DOMAIN;
 
     include /etc/nginx/include/ssl;
-    ssl_certificate /var/lib/lxc/CONTAINER/rootfs/CERT;
-    ssl_certificate_key /var/lib/lxc/CONTAINER/rootfs/KEY;
+    ssl_certificate CERT;
+    ssl_certificate_key KEY;
 
     location / {
         include /etc/nginx/include/proxy;
@@ -41,8 +41,8 @@ server {
     server_name DOMAIN;
 
     include /etc/nginx/include/ssl;
-    ssl_certificate /var/lib/lxc/CONTAINER/rootfs/CERT;
-    ssl_certificate_key /var/lib/lxc/CONTAINER/rootfs/KEY;
+    ssl_certificate CERT;
+    ssl_certificate_key KEY;
 
     location / {
         include /etc/nginx/include/proxy;
@@ -55,8 +55,8 @@ server {
     server_name DOMAIN;
 
     include /etc/nginx/include/ssl;
-    ssl_certificate /var/lib/lxc/CONTAINER/rootfs/CERT;
-    ssl_certificate_key /var/lib/lxc/CONTAINER/rootfs/KEY;
+    ssl_certificate CERT;
+    ssl_certificate_key KEY;
 
     location / {
         include /etc/nginx/include/proxy;
