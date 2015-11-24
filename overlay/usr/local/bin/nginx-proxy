@@ -193,11 +193,11 @@ if [ ${changed} -eq 1 ]; then
   fi
   if [ $? -ne 0 ]; then
     info "can't find ${name} cert; using host cert instead"
-    cat ${cert} > ${lxc_container_cert}
-    cat ${key} > ${lxc_container_key}
+    (umask 377 && cat ${cert} > ${lxc_container_cert})
+    (umask 377 && cat ${key} > ${lxc_container_key})
   else
-    lxc-attach -n ${name} -- cat ${cert} > ${lxc_container_cert}
-    lxc-attach -n ${name} -- cat ${key} > ${lxc_container_key}
+    (umask 377 && lxc-attach -n ${name} -- cat ${cert} > ${lxc_container_cert})
+    (umask 377 && lxc-attach -n ${name} -- cat ${key} > ${lxc_container_key})
   fi
 
   [ -f ${lxc_container_cert} ] || fatal "can't find ${lxc_container_cert}"
