@@ -95,8 +95,12 @@ remove_proxy() {
     if [ ${check} -eq 1 ]; then
       info "check-mode: would have removed ${domain} proxy ${name}"
     else
+      # remove domain entry from hosts.conf
+      sed -i "/^${host_ip}\s*${domain}/ d" ${hosts}
+
       info "removed ${domain} proxy ${name}"
       /etc/init.d/nginx reload;
+      /etc/init.d/dnsmasq reload;
     fi
     exit 1;
   else
@@ -119,8 +123,12 @@ create_proxy() {
 
   [ -e "${site_enabled}" ]  || ln -s ${site_available} ${site_enabled}
 
+  # add domain entry to hosts.conf
+  grep -q "^${host_ip}\s?${domain}" ${hosts} || printf "%-18s %s\n" ${host_ip} ${domain} >> ${hosts}
+
   info "created ${domain} proxy ${name}"
   /etc/init.d/nginx reload
+  /etc/init.d/dnsmasq reload;
   exit 1;
 }
 
@@ -145,6 +153,8 @@ lxc_container_cert="/etc/ssl/private/lxc-${name}-cert.crt"
 lxc_container_key="/etc/ssl/private/lxc-${name}-cert.key"
 site_enabled="/etc/nginx/sites-enabled/${domain}"
 site_available="/etc/nginx/sites-available/${domain}"
+hosts="/etc/lxc/hosts.conf"
+host_ip="$(hostname -I | cut -d ' ' -f1)"
 
 changed=0
 
