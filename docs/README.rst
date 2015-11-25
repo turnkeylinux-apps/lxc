@@ -121,6 +121,7 @@ and to better support the Ansible appliance. ::
         -h --help        usage: display this message
         -d --domain      source domain
         -n --name        container name
+        -l --list        list domains and containers
         -r --remove      remove a proxy from domain to container
         -c --check       indicate if any changes would be made
     

@@ -35,6 +35,7 @@ Options::
     -h --help        usage: display this message
     -d --domain      source domain
     -n --name        container name
+    -l --list        list domains and containers
     -r --remove      remove a proxy from domain to container
     -c --check       indicate if any changes would be made
 
@@ -132,14 +133,28 @@ create_proxy() {
   exit 1;
 }
 
+## list proxies
+list_proxies() {
+  sites="/etc/nginx/sites-available/*"
+  for site in ${sites}; do
+    domain=$(basename ${site})
+    [ "${domain}" == "container.tmpl" ] && continue
+    container=$(sed -n "0,/proxy_pass/ s|^.*http://\(.*\)/;.*$|\1|p" ${site})
+    if [ "${container}" != "" ]; then
+     printf "%-20s %s\n" ${domain} ${container}
+    fi
+  done
+}
+
 remove=0
 check=0
 
 while [[ -n $1 ]]; do
     case "$1" in
-        -h|--help)      usage; exit 1 ;;
+        -h|--help)      usage; exit 0 ;;
         -d|--domain)    domain=$2; shift ;;
         -n|--name)      name=$2; shift ;;
+        -l|--list)      list_proxies; exit 0 ;;
         -r|--remove)    remove=1 ;;
         -c|--check)     check=1 ;;
          *)             domain=$1; name=$2; break ;;
