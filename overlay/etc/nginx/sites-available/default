@@ -7,7 +7,7 @@ server {
 }
 
 server {
-    listen 0.0.0.0:443 default_server;
+    listen 0.0.0.0:443 ssl default_server;
     server_name _ "";
 
     root /var/www/;
@@ -19,7 +19,7 @@ server {
 }
 
 server {
-    listen 0.0.0.0:12320 default_server;
+    listen 0.0.0.0:12320 ssl default_server;
     server_name _ "";
 
     include /etc/nginx/include/ssl;
@@ -33,7 +33,7 @@ server {
 }
 
 server {
-    listen 0.0.0.0:12321 default_server;
+    listen 0.0.0.0:12321 ssl default_server;
     server_name _ "";
 
     include /etc/nginx/include/ssl;

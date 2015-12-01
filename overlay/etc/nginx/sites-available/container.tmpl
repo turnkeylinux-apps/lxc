@@ -1,66 +1,66 @@
 server {
-    listen 0.0.0.0:80;
-    server_name DOMAIN;
+    listen              0.0.0.0:80;
+    server_name         DOMAIN;
 
     location / {
-        include /etc/nginx/include/proxy;
-        proxy_pass http://CONTAINER/;
+        include         /etc/nginx/include/proxy;
+        proxy_pass      http://CONTAINER/;
     }
 }
 
 server {
-    listen 0.0.0.0:443;
-    server_name DOMAIN;
+    listen              0.0.0.0:443 ssl;
+    server_name         DOMAIN;
 
-    include /etc/nginx/include/ssl;
-    ssl_certificate CERT;
+    include             /etc/nginx/include/ssl;
+    ssl_certificate     CERT;
     ssl_certificate_key KEY;
 
     location / {
-        include /etc/nginx/include/proxy;
-        proxy_pass https://CONTAINER/;
+        include         /etc/nginx/include/proxy;
+        proxy_pass      https://CONTAINER/;
     }
 }
 
 server {
-    listen 0.0.0.0:12320;
-    server_name DOMAIN;
+    listen              0.0.0.0:12320 ssl;
+    server_name         DOMAIN;
 
-    include /etc/nginx/include/ssl;
-    ssl_certificate CERT;
+    include             /etc/nginx/include/ssl;
+    ssl_certificate     CERT;
     ssl_certificate_key KEY;
 
     location / {
-        include /etc/nginx/include/proxy;
-        proxy_pass https://CONTAINER:12320/;
+        include         /etc/nginx/include/proxy;
+        proxy_pass      https://CONTAINER:12320/;
     }
 }
 
 server {
-    listen 0.0.0.0:12321;
-    server_name DOMAIN;
+    listen              0.0.0.0:12321 ssl;
+    server_name         DOMAIN;
 
-    include /etc/nginx/include/ssl;
-    ssl_certificate CERT;
+    include             /etc/nginx/include/ssl;
+    ssl_certificate     CERT;
     ssl_certificate_key KEY;
 
     location / {
-        include /etc/nginx/include/proxy;
-        proxy_pass https://CONTAINER:12321/;
+        include         /etc/nginx/include/proxy;
+        proxy_pass      https://CONTAINER:12321/;
     }
 }
 
 server {
-    listen 0.0.0.0:12322;
-    server_name DOMAIN;
+    listen              0.0.0.0:12322 ssl;
+    server_name         DOMAIN;
 
-    include /etc/nginx/include/ssl;
-    ssl_certificate CERT;
+    include             /etc/nginx/include/ssl;
+    ssl_certificate     CERT;
     ssl_certificate_key KEY;
 
     location / {
-        include /etc/nginx/include/proxy;
-        proxy_pass https://CONTAINER:12322/;
+        include         /etc/nginx/include/proxy;
+        proxy_pass      https://CONTAINER:12322/;
     }
 }
 
