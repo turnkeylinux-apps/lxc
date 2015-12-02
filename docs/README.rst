@@ -24,8 +24,8 @@ the template. For example, to show the templates usage we could run::
         -v --version=    Appliance version (default: 14.0-jessie)
         -x --aptproxy=   Address of APT Proxy (e.g., http://192.168.121.1:3142)
 
-        -i --inithooks=  Path to inithooks.conf (default: /root/inithooks.conf)
-                         Reference: http://www.turnkeylinux.org/docs/inithooks
+        -i --inithooks=  Path to inithooks.conf (e.g., /root/inithooks.conf)
+                         Reference: https://www.turnkeylinux.org/docs/inithooks
 
            --rootfs=     Path to root filesystem (default: $path/$name/rootfs)
         -c --clean       Clean the cache i.e. purge all downloaded appliance images
@@ -235,5 +235,5 @@ Now we'll remove the container, wp2, we just created.
 
     # lxc-destroy -f -n wp2
 
-.. _inithooks: http://www.turnkeylinux.org/docs/inithooks
+.. _inithooks: https://www.turnkeylinux.org/docs/inithooks
 
