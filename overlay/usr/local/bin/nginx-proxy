@@ -164,6 +164,7 @@ done
 
 # vars
 template="/etc/nginx/sites-available/container.tmpl"
+lxc_path="/var/lib/lxc"
 lxc_container_cert="/etc/ssl/private/lxc-${name}-cert.crt"
 lxc_container_key="/etc/ssl/private/lxc-${name}-cert.key"
 site_enabled="/etc/nginx/sites-enabled/${domain}"
@@ -192,6 +193,17 @@ if [[ ! "$(lxc-ls)" =~ "${name}" ]]; then
     info "check-mode: can't create proxy; container ${name} doesn't exist"; exit 2;
   else
     fatal "can't create proxy; container ${name} doesn't exist"
+  fi
+fi
+
+# check to see if container uses natbr0
+grep -q "^\s*lxc.network.link\s*=\s*natbr0" ${lxc_path}/${name}/config
+if [ $? -ne 0 ]; then
+  changed=0;
+  if [ ${check} -eq 1 ]; then
+    info "check-mode: can't create proxy; container ${name} doesn't use natbr0"; exit 2;
+  else
+    fatal "can't create proxy; container ${name} doesn't use natbr0"
   fi
 fi
 
