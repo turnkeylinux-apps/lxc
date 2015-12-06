@@ -1,5 +1,5 @@
 server {
-    listen              0.0.0.0:80;
+    listen              80;
     server_name         DOMAIN;
 
     location / {
@@ -9,7 +9,7 @@ server {
 }
 
 server {
-    listen              0.0.0.0:443 ssl;
+    listen              443 ssl;
     server_name         DOMAIN;
 
     include             /etc/nginx/include/ssl;
@@ -23,7 +23,7 @@ server {
 }
 
 server {
-    listen              0.0.0.0:12320 ssl;
+    listen              12320 ssl;
     server_name         DOMAIN;
 
     include             /etc/nginx/include/ssl;
@@ -37,7 +37,7 @@ server {
 }
 
 server {
-    listen              0.0.0.0:12321 ssl;
+    listen              12321 ssl;
     server_name         DOMAIN;
 
     include             /etc/nginx/include/ssl;
@@ -51,7 +51,7 @@ server {
 }
 
 server {
-    listen              0.0.0.0:12322 ssl;
+    listen              12322 ssl;
     server_name         DOMAIN;
 
     include             /etc/nginx/include/ssl;

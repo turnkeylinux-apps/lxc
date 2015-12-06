@@ -1,14 +1,6 @@
 server {
-    listen 0.0.0.0:80 default_server;
-    server_name _ "";
-
-    root /var/www/;
-    index index.html;
-}
-
-server {
-    listen 0.0.0.0:443 ssl default_server;
-    server_name _ "";
+    listen 80 default_server;
+    listen 443 ssl default_server;
 
     root /var/www/;
     index index.html;
@@ -19,8 +11,7 @@ server {
 }
 
 server {
-    listen 0.0.0.0:12320 ssl default_server;
-    server_name _ "";
+    listen 12320 ssl default_server;
 
     include /etc/nginx/include/ssl;
     ssl_certificate /etc/ssl/certs/cert.pem;
@@ -33,8 +24,7 @@ server {
 }
 
 server {
-    listen 0.0.0.0:12321 ssl default_server;
-    server_name _ "";
+    listen 12321 ssl default_server;
 
     include /etc/nginx/include/ssl;
     ssl_certificate /etc/ssl/certs/cert.pem;
