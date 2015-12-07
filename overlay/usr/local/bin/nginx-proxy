@@ -1,4 +1,5 @@
 #!/bin/bash
+# /usr/local/bin/nginx-proxy
 # Copyright (C) 2015, John Carver <dude4linux@gmail.com>
 
   # This program is free software: you can redistribute it and/or modify
@@ -13,7 +14,7 @@
   # more details.
 
 PROGNAME=$(basename $0)
-VERSION="2.0"
+VERSION="2.1"
 
 info() { echo "INFO: $@"; }
 fatal() { echo "FATAL: $@" 1>&2; exit 2; }
@@ -70,19 +71,6 @@ exit 0;
 
 ## remove proxy
 remove_proxy() {
-  # remove cert and key only when referenced by a single proxy
-  # multiple domains may be proxied to the same container
-  if [ $(grep -l ${name} /etc/nginx/sites-available/* | wc -l) -eq 1 ]; then
-    if [ -f ${lxc_container_cert} ]; then
-      changed=1
-      [ ${check} -eq 0 ] && rm -f ${lxc_container_cert}
-    fi
-    if [ -f ${lxc_container_key} ]; then
-      changed=1
-      [ ${check} -eq 0 ] && rm -f ${lxc_container_key}
-    fi
-  fi
-
   if [ -f ${site_enabled} ]; then
     changed=1
     [ ${check} -eq 0 ] && rm -f ${site_enabled}
@@ -116,11 +104,16 @@ remove_proxy() {
 
 ## create proxy
 create_proxy() {
+  # if domain certificate doesn't exist, create one
+  [ -f ${lxc_domain_cert} ] || turnkey-make-ssl-cert ${domain}
+  [ -f ${lxc_domain_cert} ] || fatal "can't find ${lxc_domain_cert}"
+  [ -f ${lxc_domain_key} ] || fatal "can't find ${lxc_domain_key}"
+
   cp ${template} ${site_available}
   sed -i "s|DOMAIN|${domain}|" ${site_available}
   sed -i "s|CONTAINER|${name}|" ${site_available}
-  sed -i "s|CERT|${lxc_container_cert}|" ${site_available}
-  sed -i "s|KEY|${lxc_container_key}|" ${site_available}
+  sed -i "s|CERT|${lxc_domain_cert}|" ${site_available}
+  sed -i "s|KEY|${lxc_domain_key}|" ${site_available}
 
   [ -e "${site_enabled}" ]  || ln -s ${site_available} ${site_enabled}
 
@@ -165,8 +158,8 @@ done
 # vars
 template="/etc/nginx/sites-available/container.tmpl"
 lxc_path="/var/lib/lxc"
-lxc_container_cert="/etc/ssl/private/lxc-${name}-cert.crt"
-lxc_container_key="/etc/ssl/private/lxc-${name}-cert.key"
+lxc_domain_cert="/etc/ssl/certs/${domain}.pem"
+lxc_domain_key="/etc/ssl/private/${domain}.key"
 site_enabled="/etc/nginx/sites-enabled/${domain}"
 site_available="/etc/nginx/sites-available/${domain}"
 hosts="/etc/lxc/hosts.conf"
@@ -177,10 +170,10 @@ changed=0
 if [ $remove -eq 1 ]; then
   remove_proxy
 else
-  [ -f ${site_enabled} ]       || changed=1;
-  [ -f ${site_available} ]     || changed=1;
-  [ -f ${lxc_container_cert} ] || changed=1;
-  [ -f ${lxc_container_key} ]  || changed=1;
+  [ -f ${site_enabled} ]    || changed=1;
+  [ -f ${site_available} ]  || changed=1;
+  [ -f ${lxc_domain_cert} ] || changed=1;
+  [ -f ${lxc_domain_key} ]  || changed=1;
 fi 
 
 # make sure template exists
@@ -207,39 +200,10 @@ if [ $? -ne 0 ]; then
   fi
 fi
 
-# make sure container is running and initialized
-count=1
-lxc-start -d -n ${name}
-until [ $(lxc-attach -n ${name} -- cat /etc/inithooks.conf | wc -c) -eq 1 ] || [ $count -eq 24 ]; do
-  sleep 5
-  (( count++ ))
-done
-
 if [ ${changed} -eq 1 ]; then
   if [ ${check} -eq 1 ]; then
     info "check-mode: would have created ${domain} proxy ${name}"; exit 1;
   fi
-  # fetch container cert and key
-  cert="/etc/ssl/certs/cert.crt"
-  key="/etc/ssl/certs/cert.key"
-  lxc-attach -n ${name} -- test -f ${cert}
-  if [ $? -ne 0 ]; then
-    cert="/etc/ssl/certs/cert.pem"
-    key="/etc/ssl/private/cert.key"
-    lxc-attach -n ${name} -- test -f ${cert}
-  fi
-  if [ $? -ne 0 ]; then
-    info "can't find ${name} cert; using host cert instead"
-    (umask 377 && cat ${cert} > ${lxc_container_cert})
-    (umask 377 && cat ${key} > ${lxc_container_key})
-  else
-    (umask 377 && lxc-attach -n ${name} -- cat ${cert} > ${lxc_container_cert})
-    (umask 377 && lxc-attach -n ${name} -- cat ${key} > ${lxc_container_key})
-  fi
-
-  [ -f ${lxc_container_cert} ] || fatal "can't find ${lxc_container_cert}"
-  [ -f ${lxc_container_key} ] || fatal "can't find ${lxc_container_key}"
-
   create_proxy;
 else
   if [ ${check} -eq 1 ]; then
