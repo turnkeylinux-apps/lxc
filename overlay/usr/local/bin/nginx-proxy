@@ -14,7 +14,7 @@
   # more details.
 
 PROGNAME=$(basename $0)
-VERSION="2.1"
+VERSION="2.2"
 
 info() { echo "INFO: $@"; }
 fatal() { echo "FATAL: $@" 1>&2; exit 2; }
@@ -22,30 +22,31 @@ fatal() { echo "FATAL: $@" 1>&2; exit 2; }
 usage() {
 cat <<EOF
 ${PROGNAME} version ${VERSION}: GNU General Public License version 3
-Create site configuration to proxy requests destined for domain to container
+Create site configuration to proxy requests destined for domain to host
 
-Syntax: ${PROGNAME} [-d|--domain] domain [-n|--name] container [-r|--remove]
+Syntax: ${PROGNAME} [-d|--domain] domain [-n|--name] host [-r|--remove]
 
 Arguments::
 
-    domain           source domain
-    container        destination container name
+    domain           source domain (fqdn)
+    host             destination host name
 
 Options::
 
     -h --help        usage: display this message
     -d --domain      source domain
-    -n --name        container name
-    -l --list        list domains and containers
-    -r --remove      remove a proxy from domain to container
+    -n --name        host name
+    -l --list        list domains and hosts
+    -r --remove      remove a proxy from domain to host
+    -t --template    use alternate template
     -c --check       indicate if any changes would be made
 
 Examples::
 
-    # create a proxy from domain 'www.example.com' to container 'wordpress' 
+    # create a proxy from domain 'www.example.com' to host 'wordpress' 
     ${PROGNAME} --domain www.example.com --name wordpress
 
-    # remove a proxy from domain 'www.example.com' to container 'wordpress'
+    # remove a proxy from domain 'www.example.com' to host 'wordpress'
     ${PROGNAME} --remove -d www.example.com -n wordpress
 
     # run in check-mode making no changes, but indicating what would be changed
@@ -53,17 +54,21 @@ Examples::
 
 Exit Codes::
 
-        0            no changes were made or would have been made (check-mode)
-        1            changes were made or would have been made (check-mode)
-        2            fatal error prevented command completion
+        0    no changes were made or would have been made (check-mode)
+        1    changes were made or would have been made (check-mode)
+        2    fatal error prevented command completion
 
 Notes::
 
     # also supports the v13.0 syntax
     ${PROGNAME} www.example.com wordpress
 
-    # template (preconfigured for 80, 443, 12320, 12321, 12322)
-    /etc/nginx/sites-available/container.tmpl
+    # uses Jinja2 style templates for variable substitution
+    # default template (preconfigured for ports 80, 443)
+    /etc/nginx/templates/default.j2
+
+    # lxc template (preconfigured for ports 80, 443, 12320, 12321, 12322)
+    /etc/nginx/templates/container.j2
 
 EOF
 exit 0;
@@ -85,7 +90,7 @@ remove_proxy() {
       info "check-mode: would have removed ${domain} proxy ${name}"
     else
       # remove domain entry from hosts.conf
-      sed -i "/^${host_ip}\s*${domain}/ d" ${hosts}
+      sed -i "/^${proxy_ip}\s*${domain}/ d" ${hosts}
 
       info "removed ${domain} proxy ${name}"
       /etc/init.d/nginx reload;
@@ -105,24 +110,24 @@ remove_proxy() {
 ## create proxy
 create_proxy() {
   # if domain certificate doesn't exist, create one
-  [ -f ${lxc_domain_cert} ] || turnkey-make-ssl-cert ${domain}
-  [ -f ${lxc_domain_cert} ] || fatal "can't find ${lxc_domain_cert}"
-  [ -f ${lxc_domain_key} ] || fatal "can't find ${lxc_domain_key}"
+  [ -f ${domain_cert} ] || turnkey-make-ssl-cert ${domain}
+  [ -f ${domain_cert} ] || fatal "can't find ${domain_cert}"
+  [ -f ${domain_key} ]  || fatal "can't find ${domain_key}"
 
-  cp ${template} ${site_available}
-  sed -i "s|DOMAIN|${domain}|" ${site_available}
-  sed -i "s|CONTAINER|${name}|" ${site_available}
-  sed -i "s|CERT|${lxc_domain_cert}|" ${site_available}
-  sed -i "s|KEY|${lxc_domain_key}|" ${site_available}
+  cp  ${template_dir}/${template} ${site_available}
+  sed -i "s|{{ nginx_domain_name }}|${domain}|"      ${site_available}
+  sed -i "s|{{ nginx_proxy_host }}|${name}|"         ${site_available}
+  sed -i "s|{{ nginx_domain_cert }}|${domain_cert}|" ${site_available}
+  sed -i "s|{{ nginx_domain_key }}|${domain_key}|"   ${site_available}
 
   [ -e "${site_enabled}" ]  || ln -s ${site_available} ${site_enabled}
 
   # add domain entry to hosts.conf
-  grep -q "^${host_ip}\s?${domain}" ${hosts} || printf "%-18s %s\n" ${host_ip} ${domain} >> ${hosts}
+  grep -q "^${proxy_ip}\s\+${domain}" ${hosts} || printf "%-18s %s\n" ${proxy_ip} ${domain} >> ${hosts}
 
   info "created ${domain} proxy ${name}"
-  /etc/init.d/nginx reload
   /etc/init.d/dnsmasq reload;
+  /etc/init.d/nginx reload
   exit 1;
 }
 
@@ -131,13 +136,22 @@ list_proxies() {
   sites="/etc/nginx/sites-available/*"
   for site in ${sites}; do
     domain=$(basename ${site})
-    [ "${domain}" == "container.tmpl" ] && continue
-    container=$(sed -n "0,/proxy_pass/ s|^.*http://\(.*\)/;.*$|\1|p" ${site})
-    if [ "${container}" != "" ]; then
-     printf "%-20s %s\n" ${domain} ${container}
+    host=$(sed -n "0,/proxy_pass/ s|^.*http://\(.*\)/;.*$|\1|p" ${site})
+    if [ "${host}" != "" ]; then
+     printf "%-20s %s\n" ${domain} ${host}
     fi
   done
 }
+
+# vars
+template_dir="/etc/nginx/templates"
+template="default.j2"
+
+# if lxc appliance, use container template
+[[ "$(turnkey-version)" =~ "turnkey-lxc" ]] && template="container.j2"
+
+hosts="/etc/hosts.dnsmasq"
+proxy_ip="$(hostname -I | awk '/$/ { print $1 }')"
 
 remove=0
 check=0
@@ -145,25 +159,21 @@ check=0
 while [[ -n $1 ]]; do
     case "$1" in
         -h|--help)      usage; exit 0 ;;
-        -d|--domain)    domain=$2; shift ;;
-        -n|--name)      name=$2; shift ;;
+        -d|--domain)    domain="$2"; shift ;;
+        -n|--name)      name="$2"; shift ;;
         -l|--list)      list_proxies; exit 0 ;;
         -r|--remove)    remove=1 ;;
+        -t|--template)  template="$2"; shift ;;
         -c|--check)     check=1 ;;
-         *)             domain=$1; name=$2; break ;;
+         *)             domain="$1"; name="$2"; break ;;
     esac
     shift
 done
 
-# vars
-template="/etc/nginx/sites-available/container.tmpl"
-lxc_path="/var/lib/lxc"
-lxc_domain_cert="/etc/ssl/certs/${domain}.pem"
-lxc_domain_key="/etc/ssl/private/${domain}.key"
+domain_cert="/etc/ssl/certs/${domain}.pem"
+domain_key="/etc/ssl/private/${domain}.key"
 site_enabled="/etc/nginx/sites-enabled/${domain}"
 site_available="/etc/nginx/sites-available/${domain}"
-hosts="/etc/lxc/hosts.conf"
-host_ip="$(hostname -I | cut -d ' ' -f1)"
 
 changed=0
 
@@ -172,31 +182,24 @@ if [ $remove -eq 1 ]; then
 else
   [ -f ${site_enabled} ]    || changed=1;
   [ -f ${site_available} ]  || changed=1;
-  [ -f ${lxc_domain_cert} ] || changed=1;
-  [ -f ${lxc_domain_key} ]  || changed=1;
+  [ -f ${domain_cert} ]     || changed=1;
+  [ -f ${domain_key} ]      || changed=1;
 fi 
 
 # make sure template exists
-[ -e "${template}" ] || fatal "does not exist: ${template}"
+[ -e "${template_dir}/${template}" ] || fatal "does not exist: ${template}"
 
-# check to see if container exists
-if [[ ! "$(lxc-ls)" =~ "${name}" ]]; then
-  changed=0;
-  if [ ${check} -eq 1 ]; then
-    info "check-mode: can't create proxy; container ${name} doesn't exist"; exit 2;
-  else
-    fatal "can't create proxy; container ${name} doesn't exist"
-  fi
-fi
+# refresh dns to make sure recent dhcp additions are included
+service dnsmasq reload
 
-# check to see if container uses natbr0
-grep -q "^\s*lxc.network.link\s*=\s*natbr0" ${lxc_path}/${name}/config
+# check to see if host exists
+host -W 30 ${name} > /dev/null
 if [ $? -ne 0 ]; then
   changed=0;
   if [ ${check} -eq 1 ]; then
-    info "check-mode: can't create proxy; container ${name} doesn't use natbr0"; exit 2;
+    info "check-mode: can't create proxy; host ${name} doesn't exist"; exit 2;
   else
-    fatal "can't create proxy; container ${name} doesn't use natbr0"
+    fatal "can't create proxy; host ${name} doesn't exist"
   fi
 fi
 

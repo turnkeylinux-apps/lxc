@@ -1,0 +1,23 @@
+server {
+    listen              80;
+    server_name         {{ nginx_domain_name }};
+
+    location / {
+        include         /etc/nginx/include/proxy;
+        proxy_pass      http://{{ nginx_proxy_host }}/;
+    }
+}
+
+server {
+    listen              443 ssl;
+    server_name         {{ nginx_domain_name }};
+
+    include             /etc/nginx/include/ssl;
+    ssl_certificate     {{ nginx_domain_cert }};
+    ssl_certificate_key {{ nginx_domain_key }};
+
+    location / {
+        include         /etc/nginx/include/proxy;
+        proxy_pass      https://{{ nginx_proxy_host }}/;
+    }
+}

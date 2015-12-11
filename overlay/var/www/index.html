@@ -155,31 +155,32 @@ Example usage::
     lxc-create -n core -f /etc/lxc/bridge.conf -t turnkey -- core -i /root/inithooks.conf
 </pre>
                     <h3>Usage: nginx-proxy</h3>
-                    <pre>nginx-proxy version 2.0: GNU General Public License version 3
-Create site configuration to proxy requests destined for domain to container
+                    <pre>nginx-proxy version 2.2: GNU General Public License version 3
+Create site configuration to proxy requests destined for domain to host
 
-Syntax: nginx-proxy [-d|--domain] domain [-n|--name] container [-r|--remove]
+Syntax: nginx-proxy [-d|--domain] domain [-n|--name] host [-r|--remove]
 
 Arguments::
 
-    domain           source domain
-    container        destination container name
+    domain           source domain (fqdn)
+    host             destination host name
 
 Options::
 
     -h --help        usage: display this message
     -d --domain      source domain
-    -n --name        container name
-    -l --list        list domains and containers
-    -r --remove      remove a proxy from domain to container
+    -n --name        host name
+    -l --list        list domains and hosts
+    -r --remove      remove a proxy from domain to host
+    -t --template    use alternate template
     -c --check       indicate if any changes would be made
 
 Examples::
 
-    # create a proxy from domain 'www.example.com' to container 'wordpress' 
+    # create a proxy from domain 'www.example.com' to host 'wordpress' 
     nginx-proxy --domain www.example.com --name wordpress
 
-    # remove a proxy from domain 'www.example.com' to container 'wordpress'
+    # remove a proxy from domain 'www.example.com' to host 'wordpress'
     nginx-proxy --remove -d www.example.com -n wordpress
 
     # run in check-mode making no changes, but indicating what would be changed
@@ -187,17 +188,22 @@ Examples::
 
 Exit Codes::
 
-        0            no changes were made or would have been made (check-mode)
-        1            changes were made or would have been made (check-mode)
-        2            fatal error prevented command completion
+        0    no changes were made or would have been made (check-mode)
+        1    changes were made or would have been made (check-mode)
+        2    fatal error prevented command completion
 
 Notes::
 
     # also supports the v13.0 syntax
     nginx-proxy www.example.com wordpress
 
-    # template (preconfigured for 80, 443, 12320, 12321, 12322)
-    /etc/nginx/sites-available/container.tmpl
+    # uses Jinja2 style templates for variable substitution
+    # default template (preconfigured for ports 80, 443)
+    /etc/nginx/templates/default.j2
+
+    # lxc template (preconfigured for ports 80, 443, 12320, 12321, 12322)
+    /etc/nginx/templates/container.j2
+
 </pre>
                 </div>
             </div>
