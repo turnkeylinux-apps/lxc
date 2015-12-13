@@ -1,11 +1,11 @@
 #!/bin/bash -ex
 
-# enable ip forwarding
-sed -i "/^#net.ipv4.ip_forward=1/ s/#//" /etc/sysctl.conf
+# modify kernel settings
+sed -i '/^#net.ipv4.ip_forward=1/ s/#//;' /etc/sysctl.conf
+echo 'net.ipv4.tcp_fin_timeout = 15' >> /etc/sysctl.conf
 
 # change webshell and webmin listening ports in stunnel4
-sed -i "s|^accept  = 12320|accept  = 22320|" /etc/stunnel/stunnel.conf
-sed -i "s|^accept  = 12321|accept  = 22321|" /etc/stunnel/stunnel.conf
+sed -i 's|^\(accept *= *\)1\(232[01]\)|\12\2|g' /etc/stunnel/stunnel.conf
 
 # remove ssl certificates from ssl include
 # allow nginx proxy to use container certs and keys
