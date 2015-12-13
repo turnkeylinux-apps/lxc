@@ -74,6 +74,20 @@ EOF
 exit 0;
 }
 
+wait_for_host() {
+    # wait for host name resolution
+    # it does not mean that host is up
+    local hostname="$1"
+    local retries="${2:-10}"
+    local delay="${3:-3}"
+
+    for (( i=1; i<=${retries}; i++ )); do
+        host ${hostname} > /dev/null && exit 0;
+        sleep ${delay}
+    done
+    exit 1;
+}
+
 ## remove proxy
 remove_proxy() {
   if [ -f ${site_enabled} ]; then
@@ -126,8 +140,8 @@ create_proxy() {
   grep -q "^${proxy_ip}\s\+${domain}" ${hosts} || printf "%-18s %s\n" ${proxy_ip} ${domain} >> ${hosts}
 
   info "created ${domain} proxy ${name}"
-  /etc/init.d/dnsmasq reload;
-  /etc/init.d/nginx reload
+  service dnsmasq reload;
+  service nginx reload;
   exit 1;
 }
 
@@ -193,7 +207,7 @@ fi
 service dnsmasq reload
 
 # check to see if host exists
-host -W 30 ${name} > /dev/null
+wait_for_host ${name}
 if [ $? -ne 0 ]; then
   changed=0;
   if [ ${check} -eq 1 ]; then
