@@ -82,10 +82,10 @@ wait_for_host() {
     local delay="${3:-3}"
 
     for (( i=1; i<=${retries}; i++ )); do
-        host ${hostname} > /dev/null && exit 0;
+        host ${hostname} > /dev/null && return 0;
         sleep ${delay}
     done
-    exit 1;
+    return 1;
 }
 
 ## remove proxy
