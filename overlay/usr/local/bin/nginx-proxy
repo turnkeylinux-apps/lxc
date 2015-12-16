@@ -129,10 +129,10 @@ create_proxy() {
   [ -f ${domain_key} ]  || fatal "can't find ${domain_key}"
 
   cp  ${template_dir}/${template} ${site_available}
-  sed -i "s|{{ nginx_domain_name }}|${domain}|"      ${site_available}
-  sed -i "s|{{ nginx_proxy_host }}|${name}|"         ${site_available}
-  sed -i "s|{{ nginx_domain_cert }}|${domain_cert}|" ${site_available}
-  sed -i "s|{{ nginx_domain_key }}|${domain_key}|"   ${site_available}
+  sed -i "s|{{ nginx_domain_name }}|${domain}|;\
+          s|{{ nginx_proxy_host }}|${name}|;\
+          s|{{ nginx_domain_cert }}|${domain_cert}|;\
+          s|{{ nginx_domain_key }}|${domain_key}|" ${site_available}
 
   [ -e "${site_enabled}" ]  || ln -s ${site_available} ${site_enabled}
 
