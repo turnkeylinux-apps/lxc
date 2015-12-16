@@ -1,0 +1,37 @@
+#!/bin/bash -e
+# Author: Anton Pyrogovskyi <anton@turnkeylinux.org>
+
+ARGV=$@
+
+name=
+conf=
+
+while true; do
+    if [[ $1 == *n* ]]; then
+        shift
+        name="$1"
+        conf="/var/lib/lxc/$name/config"
+        break
+    fi
+    shift
+done
+
+netlink=$( grep 'lxc\.network\.link' $conf | cut -d'=' -f2 | tr -d ' ' )
+
+/usr/bin/lxc-destroy $ARGV
+
+LEASES=/var/lib/misc/dnsmasq.leases
+
+if [ $? -eq 0 ]; then
+    macip=$( grep $name $LEASES | cut -d' ' -f2-3 )
+    mac=$( echo $macip | cut -d' ' -f 1 )
+    ip=$( echo $macip | cut -d' ' -f 2 )
+
+    dhcp_release $netlink $ip $mac
+
+    nginx-proxy -r -d all -n $name
+
+    ssh-keygen -R $name
+    ssh-keygen -R $ip
+fi
+
