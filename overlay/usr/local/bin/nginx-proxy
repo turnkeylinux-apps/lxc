@@ -107,8 +107,8 @@ remove_proxy() {
       sed -i "/^${proxy_ip}\s*${domain}/ d" ${hosts}
 
       info "removed ${domain} proxy ${name}"
-      /etc/init.d/nginx reload
-      /etc/init.d/dnsmasq reload
+      service nginx reload
+      service dnsmasq reload
     fi
     exit 1
   else
@@ -140,8 +140,8 @@ create_proxy() {
   grep -q "^${proxy_ip}\s\+${domain}" ${hosts} || printf "%-18s %s\n" ${proxy_ip} ${domain} >> ${hosts}
 
   info "created ${domain} proxy ${name}"
-  /etc/init.d/dnsmasq reload
-  /etc/init.d/nginx reload
+  service dnsmasq reload
+  service nginx reload
   exit 1
 }
 
