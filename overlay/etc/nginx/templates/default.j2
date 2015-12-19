@@ -4,7 +4,7 @@ server {
 
     location / {
         include         /etc/nginx/include/proxy;
-        proxy_pass      http://{{ nginx_proxy_host }}/;
+        proxy_pass      http://{{ nginx_proxy_host }};
     }
 }
 
@@ -18,6 +18,6 @@ server {
 
     location / {
         include         /etc/nginx/include/proxy;
-        proxy_pass      https://{{ nginx_proxy_host }}/;
+        proxy_pass      https://{{ nginx_proxy_host }};
     }
 }

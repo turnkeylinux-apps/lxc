@@ -4,7 +4,7 @@ server {
 
     location / {
         include         /etc/nginx/include/proxy;
-        proxy_pass      http://{{ nginx_proxy_host }}/;
+        proxy_pass      http://{{ nginx_proxy_host }};
     }
 }
 
@@ -18,7 +18,7 @@ server {
 
     location / {
         include         /etc/nginx/include/proxy;
-        proxy_pass      https://{{ nginx_proxy_host }}/;
+        proxy_pass      https://{{ nginx_proxy_host }};
     }
 }
 
@@ -36,7 +36,7 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_pass      https://{{ nginx_proxy_host }}:12320/;
+        proxy_pass      https://{{ nginx_proxy_host }}:12320;
     }
 }
 
@@ -50,7 +50,7 @@ server {
 
     location / {
         include         /etc/nginx/include/proxy;
-        proxy_pass      https://{{ nginx_proxy_host }}:12321/;
+        proxy_pass      https://{{ nginx_proxy_host }}:12321;
     }
 }
 
@@ -64,7 +64,7 @@ server {
 
     location / {
         include         /etc/nginx/include/proxy;
-        proxy_pass      https://{{ nginx_proxy_host }}:12322/;
+        proxy_pass      https://{{ nginx_proxy_host }}:12322;
     }
 }
 
