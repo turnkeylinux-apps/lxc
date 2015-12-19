@@ -37,7 +37,7 @@ Options::
     -d --domain      source domain
     -n --name        host name
     -l --list        list domains and hosts
-    -r --remove      remove a proxy from domain to host
+    -r --remove      remove a proxy from domain(s) to host
     -t --template    use alternate template
     -c --check       indicate if any changes would be made
 
@@ -48,6 +48,9 @@ Examples::
 
     # remove a proxy from domain 'www.example.com' to host 'wordpress'
     ${PROGNAME} --remove -d www.example.com -n wordpress
+
+    # remove all proxies for host 'wordpress'
+    ${PROGNAME} --remove -d all -n wordpress
 
     # run in check-mode making no changes, but indicating what would be changed
     ${PROGNAME} --check -d www.example.com -n wordpress
@@ -193,6 +196,14 @@ site_available="/etc/nginx/sites-available/${domain}"
 changed=0
 
 if [ $remove -eq 1 ]; then
+  if [ $domain = 'all' ]; then
+      for i in $( grep -Rl "proxy_pass *https\?://$name" /etc/nginx/sites-{available,enabled} | xargs basename | uniq ); do
+          $0 -r -d $i -n "$name" || true
+      done
+      info "all proxies for $name removed"
+      exit 0
+  fi
+
   remove_proxy
 else
   [ -f ${site_enabled} ]    || changed=1
