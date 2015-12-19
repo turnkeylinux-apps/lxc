@@ -49,15 +49,6 @@ info() { echo "INFO [$(basename $0)]: $@"; }
 warn() { echo "WARN [$(basename $0)]: $@" 1>&2; return 1; }
 fatal() { echo "FATAL [$(basename $0)]: $@" 1>&2; exit 1; }
 
-release_lease() {
-    local name=$1
-
-    # release dnsmasq lease, if any before creating new container
-    container_mac=$(grep "\s${name}\s" ${LEASES} | awk '{print $2}')
-    container_ip=$( grep "\s${name}\s" ${LEASES} | awk '{print $3}')
-    dhcp_release natbr0 ${container_ip} ${container_mac}
-}
-
 configure_debian() {
     local rootfs=$1
     local name=$2
@@ -583,9 +574,6 @@ if [ -z "${rootfs}" ]; then
 fi
 
 image=$(get_image_name ${deb_version} ${app_name} ${tkl_version} ${arch})
-
-# release dnsmasq lease, if any before creating new container
-release_lease ${name}
 
 install_turnkey ${image} ${rootfs}
 [ $? -ne 0 ] && fatal "failed to install turnkey ${app_name}"
