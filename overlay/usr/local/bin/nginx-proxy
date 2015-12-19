@@ -151,7 +151,7 @@ list_proxies() {
   for site in ${sites}; do
     domain=$(basename ${site})
     [ "${domain}" == "default" ] && continue
-    host=$(sed -n "0,/proxy_pass/ s|^.*http://\(.*\)/;.*$|\1|p" ${site})
+    host=$(sed -n "0,/proxy_pass/ s|^.*proxy_pass.*://\(.*\)/\?;.*$|\1|p" ${site})
     if [ "${host}" != "" ]; then
      printf "%-20s %s\n" ${domain} ${host}
     fi
