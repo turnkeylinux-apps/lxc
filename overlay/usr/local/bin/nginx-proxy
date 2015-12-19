@@ -74,7 +74,6 @@ Notes::
     /etc/nginx/templates/container.j2
 
 EOF
-exit 0
 }
 
 wait_for_host() {
