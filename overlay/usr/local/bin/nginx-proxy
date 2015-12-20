@@ -37,7 +37,7 @@ Options::
     -d --domain      source domain
     -n --name        host name
     -l --list        list domains and hosts
-    -r --remove      remove a proxy from domain to host
+    -r --remove      remove a proxy from domain(s) to host
     -t --template    use alternate template
     -c --check       indicate if any changes would be made
 
@@ -48,6 +48,9 @@ Examples::
 
     # remove a proxy from domain 'www.example.com' to host 'wordpress'
     ${PROGNAME} --remove -d www.example.com -n wordpress
+
+    # remove all proxies for host 'wordpress'
+    ${PROGNAME} --remove -d all -n wordpress
 
     # run in check-mode making no changes, but indicating what would be changed
     ${PROGNAME} --check -d www.example.com -n wordpress
@@ -71,7 +74,6 @@ Notes::
     /etc/nginx/templates/container.j2
 
 EOF
-exit 0;
 }
 
 wait_for_host() {
@@ -107,17 +109,17 @@ remove_proxy() {
       sed -i "/^${proxy_ip}\s*${domain}/ d" ${hosts}
 
       info "removed ${domain} proxy ${name}"
-      /etc/init.d/nginx reload;
-      /etc/init.d/dnsmasq reload;
+      service nginx reload
+      service dnsmasq reload
     fi
-    exit 1;
+    exit 1
   else
     if [ ${check} -eq 1 ]; then
       info "check-mode: no change: ${domain} proxy ${name} does not exist"
     else
       info "no change: ${domain} proxy ${name} does not exist"
     fi
-    exit 0;
+    exit 0
   fi
 }
 
@@ -129,10 +131,10 @@ create_proxy() {
   [ -f ${domain_key} ]  || fatal "can't find ${domain_key}"
 
   cp  ${template_dir}/${template} ${site_available}
-  sed -i "s|{{ nginx_domain_name }}|${domain}|"      ${site_available}
-  sed -i "s|{{ nginx_proxy_host }}|${name}|"         ${site_available}
-  sed -i "s|{{ nginx_domain_cert }}|${domain_cert}|" ${site_available}
-  sed -i "s|{{ nginx_domain_key }}|${domain_key}|"   ${site_available}
+  sed -i "s|{{ nginx_domain_name }}|${domain}|;\
+          s|{{ nginx_proxy_host }}|${name}|;\
+          s|{{ nginx_domain_cert }}|${domain_cert}|;\
+          s|{{ nginx_domain_key }}|${domain_key}|" ${site_available}
 
   [ -e "${site_enabled}" ]  || ln -s ${site_available} ${site_enabled}
 
@@ -140,9 +142,9 @@ create_proxy() {
   grep -q "^${proxy_ip}\s\+${domain}" ${hosts} || printf "%-18s %s\n" ${proxy_ip} ${domain} >> ${hosts}
 
   info "created ${domain} proxy ${name}"
-  service dnsmasq reload;
-  service nginx reload;
-  exit 1;
+  service dnsmasq reload
+  service nginx reload
+  exit 1
 }
 
 ## list proxies
@@ -171,6 +173,11 @@ proxy_ip="$(hostname -I | awk '/$/ { print $1 }')"
 remove=0
 check=0
 
+if [ $# -lt 2 ]; then
+    usage
+    exit 2
+fi
+
 while [[ -n $1 ]]; do
     case "$1" in
         -h|--help)      usage; exit 0 ;;
@@ -193,12 +200,20 @@ site_available="/etc/nginx/sites-available/${domain}"
 changed=0
 
 if [ $remove -eq 1 ]; then
+  if [ $domain = 'all' ]; then
+      for i in $( grep -Rl "proxy_pass *https\?://$name" /etc/nginx/sites-{available,enabled} | xargs basename | uniq ); do
+          $0 -r -d $i -n "$name" || true
+      done
+      info "all proxies for $name removed"
+      exit 0
+  fi
+
   remove_proxy
 else
-  [ -f ${site_enabled} ]    || changed=1;
-  [ -f ${site_available} ]  || changed=1;
-  [ -f ${domain_cert} ]     || changed=1;
-  [ -f ${domain_key} ]      || changed=1;
+  [ -f ${site_enabled} ]    || changed=1
+  [ -f ${site_available} ]  || changed=1
+  [ -f ${domain_cert} ]     || changed=1
+  [ -f ${domain_key} ]      || changed=1
 fi 
 
 # make sure template exists
@@ -210,9 +225,10 @@ service dnsmasq reload
 # check to see if host exists
 wait_for_host ${name}
 if [ $? -ne 0 ]; then
-  changed=0;
+  changed=0
   if [ ${check} -eq 1 ]; then
-    info "check-mode: can't create proxy; host ${name} doesn't exist"; exit 2;
+    info "check-mode: can't create proxy; host ${name} doesn't exist"
+    exit 2
   else
     fatal "can't create proxy; host ${name} doesn't exist"
   fi
@@ -220,15 +236,16 @@ fi
 
 if [ ${changed} -eq 1 ]; then
   if [ ${check} -eq 1 ]; then
-    info "check-mode: would have created ${domain} proxy ${name}"; exit 1;
+    info "check-mode: would have created ${domain} proxy ${name}"
+    exit 1
   fi
-  create_proxy;
+  create_proxy
 else
   if [ ${check} -eq 1 ]; then
     info "check-mode: ${domain} proxy ${name} exists, no change required"
   else
     info "${domain} proxy ${name} exists, no change required"
   fi
-  exit 0;
+  exit 0
 fi
 
