@@ -173,7 +173,8 @@ proxy_ip="$(hostname -I | awk '/$/ { print $1 }')"
 remove=0
 check=0
 
-if [ $# -lt 2 ]; then
+# must have one or more arguments
+if [ $# -eq 0 ]; then
     usage
     exit 2
 fi
@@ -187,10 +188,16 @@ while [[ -n $1 ]]; do
         -r|--remove)    remove=1 ;;
         -t|--template)  template="$2"; shift ;;
         -c|--check)     check=1 ;;
-         *)             domain="$1"; name="$2"; break ;;
+         *)             domain="$1"; name="$2"; shift 2; break ;;
     esac
     shift
 done
+
+# should only have zero arguments here
+if [ $# -ne 0 ]; then
+    usage
+    exit 2
+fi
 
 domain_cert="/etc/ssl/certs/${domain}.pem"
 domain_key="/etc/ssl/private/${domain}.key"
