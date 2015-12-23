@@ -1,7 +1,9 @@
-#!/bin/bash -e
+#!/bin/bash 
 # Author: Anton Pyrogovskyi <anton@turnkeylinux.org>
 
 ARGV=$@
+
+LEASES=/var/lib/misc/dnsmasq.leases
 
 name=
 conf=
@@ -20,8 +22,6 @@ netlink=$( grep 'lxc\.network\.link' $conf | cut -d'=' -f2 | tr -d ' ' )
 
 /usr/bin/lxc-destroy $ARGV
 
-LEASES=/var/lib/misc/dnsmasq.leases
-
 if [ $? -eq 0 ]; then
     macip=$( grep $name $LEASES | cut -d' ' -f2-3 )
     mac=$( echo $macip | cut -d' ' -f 1 )
@@ -33,5 +33,7 @@ if [ $? -eq 0 ]; then
 
     ssh-keygen -R $name
     ssh-keygen -R $ip
+
+    exit 0
 fi
 
