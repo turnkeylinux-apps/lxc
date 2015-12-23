@@ -14,7 +14,7 @@
   # more details.
 
 PROGNAME=$(basename $0)
-VERSION="2.2"
+VERSION="2.3"
 
 info() { echo "INFO: $@"; }
 fatal() { echo "FATAL: $@" 1>&2; exit 2; }
@@ -84,91 +84,120 @@ wait_for_host() {
     local delay="${3:-3}"
 
     for (( i=1; i<=${retries}; i++ )); do
-        host ${hostname} > /dev/null && return 0;
+        host ${hostname} > /dev/null && return 0
         sleep ${delay}
     done
-    return 1;
+    return 1
 }
 
 ## remove proxy
 remove_proxy() {
-  if [ -f ${site_enabled} ]; then
-    changed=1
-    [ ${check} -eq 0 ] && rm -f ${site_enabled}
-  fi
-  if [ -f ${site_available} ]; then
-    changed=1
-    [ ${check} -eq 0 ] && rm -f ${site_available}
-  fi
+  local changed=0
 
-  if [ ${changed} -eq 1 ]; then
-    if [ ${check} -eq 1 ]; then
-      info "check-mode: would have removed ${domain} proxy ${name}"
-    else
+  # domain_cert and domain_key are considered placeholders
+  # which may have been replaced by registered certs/keys
+  # therefore we don't routinely remove them
+  domain_cert="/etc/ssl/certs/${domain}.pem"
+  domain_key="/etc/ssl/private/${domain}.key"
+
+  site_enabled="/etc/nginx/sites-enabled/${domain}"
+  site_available="/etc/nginx/sites-available/${domain}"
+
+  [ -f ${site_enabled} ]   && changed=1
+  [ -f ${site_available} ] && changed=1
+
+  if [ ${changed} -eq 1  ]; then
+    if [ ${check} -eq 0 ]; then
+      rm -f ${site_enabled}
+      rm -f ${site_available}
+
       # remove domain entry from hosts.conf
       sed -i "/^${proxy_ip}\s*${domain}/ d" ${hosts}
 
       info "removed ${domain} proxy ${name}"
-      service nginx reload
-      service dnsmasq reload
-    fi
-    exit 1
-  else
-    if [ ${check} -eq 1 ]; then
-      info "check-mode: no change: ${domain} proxy ${name} does not exist"
     else
-      info "no change: ${domain} proxy ${name} does not exist"
+      info "check-mode: would have removed ${domain} proxy ${name}"
     fi
-    exit 0
+  else
+    if [ ${check} -eq 0 ]; then
+      info "no change: ${domain} proxy ${name} does not exist"
+    else
+      info "check-mode: no change: ${domain} proxy ${name} does not exist"
+    fi
   fi
+  return ${changed}
 }
 
 ## create proxy
 create_proxy() {
-  # if domain certificate doesn't exist, create one
-  [ -f ${domain_cert} ] || turnkey-make-ssl-cert ${domain}
-  [ -f ${domain_cert} ] || fatal "can't find ${domain_cert}"
-  [ -f ${domain_key} ]  || fatal "can't find ${domain_key}"
+  local changed=0
 
-  cp  ${template_dir}/${template} ${site_available}
-  sed -i "s|{{ nginx_domain_name }}|${domain}|;\
-          s|{{ nginx_proxy_host }}|${name}|;\
-          s|{{ nginx_domain_cert }}|${domain_cert}|;\
-          s|{{ nginx_domain_key }}|${domain_key}|" ${site_available}
+  domain_cert="/etc/ssl/certs/${domain}.pem"
+  domain_key="/etc/ssl/private/${domain}.key"
+  site_enabled="/etc/nginx/sites-enabled/${domain}"
+  site_available="/etc/nginx/sites-available/${domain}"
 
-  [ -e "${site_enabled}" ]  || ln -s ${site_available} ${site_enabled}
+  [ -f ${site_enabled} ]    || changed=1
+  [ -f ${site_available} ]  || changed=1
+  [ -f ${domain_cert} ]     || changed=1
+  [ -f ${domain_key} ]      || changed=1
 
-  # add domain entry to hosts.conf
-  grep -q "^${proxy_ip}\s\+${domain}" ${hosts} || printf "%-18s %s\n" ${proxy_ip} ${domain} >> ${hosts}
+  if [ ${changed} -eq 1 ]; then
+    if [ ${check} -eq 0 ]; then
+      # if domain certificate doesn't exist, create one
+      [ -f ${domain_cert} ] || turnkey-make-ssl-cert ${domain}
+      [ -f ${domain_cert} ] || fatal "can't find ${domain_cert}"
+      [ -f ${domain_key} ]  || fatal "can't find ${domain_key}"
 
-  info "created ${domain} proxy ${name}"
-  service dnsmasq reload
-  service nginx reload
-  exit 1
+      cp  ${template_dir}/${template} ${site_available}
+      sed -i "s|{{ nginx_domain_name }}|${domain}|;\
+              s|{{ nginx_proxy_host }}|${name}|;\
+              s|{{ nginx_domain_cert }}|${domain_cert}|;\
+              s|{{ nginx_domain_key }}|${domain_key}|" ${site_available}
+
+      [ -e "${site_enabled}" ]  || ln -s ${site_available} ${site_enabled}
+
+      # add domain entry to hosts.conf
+      grep -q "^${proxy_ip}\s\+${domain}" ${hosts} || printf "%-18s %s\n" ${proxy_ip} ${domain} >> ${hosts}
+
+      info "created ${domain} proxy ${name}"
+    else
+      info "check-mode: would have created ${domain} proxy ${name}"
+    fi
+  else
+    if [ ${check} -eq 0 ]; then
+      info "${domain} proxy ${name} exists, no change required"
+    else
+      info "check-mode: ${domain} proxy ${name} exists, no change required"
+    fi
+  fi
+  return ${changed}
 }
 
 ## list proxies
 list_proxies() {
-  sites="/etc/nginx/sites-available/*"
-  for site in ${sites}; do
+  local name
+  local domain
+
+  for site in ${sites}/*; do
     domain=$(basename ${site})
     [ "${domain}" == "default" ] && continue
-    host=$(sed -n "0,/proxy_pass/ s|^.*proxy_pass.*://\(.*\)/\?;.*$|\1|p" ${site})
-    if [ "${host}" != "" ]; then
-     printf "%-20s %s\n" ${domain} ${host}
+    name=$(sed -n "0,/proxy_pass/ s|^.*proxy_pass.*://\(.*\)/\?;.*$|\1|p" ${site})
+    if [ "${name}" != "" ]; then
+     printf "%-20s %s\n" ${domain} ${name}
     fi
   done
 }
 
 # vars
+sites="/etc/nginx/sites-available"
+hosts="/etc/hosts.dnsmasq"
+proxy_ip="$(hostname -I | awk '/$/ { print $1 }')"
 template_dir="/etc/nginx/templates"
 template="default.j2"
 
 # if lxc appliance, use container template
 [[ "$(turnkey-version)" =~ "turnkey-lxc" ]] && template="container.j2"
-
-hosts="/etc/hosts.dnsmasq"
-proxy_ip="$(hostname -I | awk '/$/ { print $1 }')"
 
 remove=0
 check=0
@@ -193,66 +222,42 @@ while [[ -n $1 ]]; do
     shift
 done
 
-# should only have zero arguments here
-if [ $# -ne 0 ]; then
-    usage
-    exit 2
+# should only have zero arguments here, 
+# domain and container name must not be null
+if [[ $# -ne 0 || -z "${domain}" || -z "${name}" ]]; then
+  usage
+  exit 2
 fi
-
-domain_cert="/etc/ssl/certs/${domain}.pem"
-domain_key="/etc/ssl/private/${domain}.key"
-site_enabled="/etc/nginx/sites-enabled/${domain}"
-site_available="/etc/nginx/sites-available/${domain}"
 
 changed=0
 
-if [ $remove -eq 1 ]; then
-  if [ $domain = 'all' ]; then
-      for i in $( grep -Rl "proxy_pass *https\?://$name" /etc/nginx/sites-{available,enabled} | xargs basename | uniq ); do
-          $0 -r -d $i -n "$name" || true
-      done
-      info "all proxies for $name removed"
-      exit 0
+if [ ${remove} -eq 1 ]; then
+  if [ "${domain}" = 'all' ]; then
+    for domain in $( grep -Rl "proxy_pass *https\?://${name}" ${sites} | xargs -n1 basename | sort -u ); do
+      remove_proxy || changed=1
+    done
+  else
+    remove_proxy || changed=1
   fi
-
-  remove_proxy
 else
-  [ -f ${site_enabled} ]    || changed=1
-  [ -f ${site_available} ]  || changed=1
-  [ -f ${domain_cert} ]     || changed=1
-  [ -f ${domain_key} ]      || changed=1
+  # prepare to create proxy
+  # make sure template exists
+  [ -e "${template_dir}/${template}" ] || fatal "does not exist: ${template}"
+
+  # check to see if host exists
+  wait_for_host ${name}
+  if [ $? -ne 0 ]; then
+    if [ ${check} -eq 0 ]; then
+      fatal "can't create proxy; host ${name} doesn't exist"
+    else
+      info "check-mode: can't create proxy; host ${name} doesn't exist"
+      exit 0
+    fi
+  fi
+  create_proxy || changed=1
 fi 
 
-# make sure template exists
-[ -e "${template_dir}/${template}" ] || fatal "does not exist: ${template}"
-
-# refresh dns to make sure recent dhcp additions are included
 service dnsmasq reload
-
-# check to see if host exists
-wait_for_host ${name}
-if [ $? -ne 0 ]; then
-  changed=0
-  if [ ${check} -eq 1 ]; then
-    info "check-mode: can't create proxy; host ${name} doesn't exist"
-    exit 2
-  else
-    fatal "can't create proxy; host ${name} doesn't exist"
-  fi
-fi
-
-if [ ${changed} -eq 1 ]; then
-  if [ ${check} -eq 1 ]; then
-    info "check-mode: would have created ${domain} proxy ${name}"
-    exit 1
-  fi
-  create_proxy
-else
-  if [ ${check} -eq 1 ]; then
-    info "check-mode: ${domain} proxy ${name} exists, no change required"
-  else
-    info "${domain} proxy ${name} exists, no change required"
-  fi
-  exit 0
-fi
+service nginx reload
+exit ${changed}
 
