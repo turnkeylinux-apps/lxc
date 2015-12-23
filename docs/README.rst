@@ -100,62 +100,64 @@ traffic to the container based on a set of rules.
 Usage: nginx-proxy
 ''''''''''''''''''
 
-The 2.2 version of nginx-proxy has been updated to support the v14.0
+The 2.3 version of nginx-proxy has been updated to support the v14.0
 appliances and was decoupled from lxc so it can proxy any upstream vm or
 container. Some new options have been added to make it easier to cleanup
 when containers are removed and to better support the Ansible appliance.
 Templates now use the Jinja2 style, although Jinja2 is not yet used to
 render the output files. This feature may be added in future versions. ::
 
-    nginx-proxy version 2.2: GNU General Public License version 3
+    nginx-proxy version 2.3: GNU General Public License version 3
     Create site configuration to proxy requests destined for domain to host
-    
+
     Syntax: nginx-proxy [-d|--domain] domain [-n|--name] host [-r|--remove]
-    
+
     Arguments::
-    
+
         domain           source domain (fqdn)
         host             destination host name
-    
+
     Options::
-    
+
         -h --help        usage: display this message
         -d --domain      source domain
         -n --name        host name
         -l --list        list domains and hosts
-        -r --remove      remove a proxy from domain to host
+        -r --remove      remove a proxy from domain(s) to host
         -t --template    use alternate template
         -c --check       indicate if any changes would be made
-    
+
     Examples::
-    
+
         # create a proxy from domain 'www.example.com' to host 'wordpress' 
         nginx-proxy --domain www.example.com --name wordpress
-    
+
         # remove a proxy from domain 'www.example.com' to host 'wordpress'
         nginx-proxy --remove -d www.example.com -n wordpress
-    
+
+        # remove all proxies for host 'wordpress'
+        nginx-proxy --remove -d all -n wordpress
+
         # run in check-mode making no changes, but indicating what would be changed
         nginx-proxy --check -d www.example.com -n wordpress
-    
+
     Exit Codes::
-    
+
             0    no changes were made or would have been made (check-mode)
             1    changes were made or would have been made (check-mode)
             2    fatal error prevented command completion
-    
+
     Notes::
-    
+
         # also supports the v13.0 syntax
         nginx-proxy www.example.com wordpress
-    
+
         # uses Jinja2 style templates for variable substitution
         # default template (preconfigured for ports 80, 443)
         /etc/nginx/templates/default.j2
-    
+
         # lxc template (preconfigured for ports 80, 443, 12320, 12321, 12322)
-        /etc/nginx/templates/container.j2
-    
+        /etc/nginx/templates/container.j2    
 
 Creating a container (wordpress, bridged)
 -----------------------------------------

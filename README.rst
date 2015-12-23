@@ -17,6 +17,7 @@ top of that:
     - Supports configuration of network link (e.g., br0, natbr0, none).
     - Supports configuration of apt proxy.
     - Verifies GPG signatures when available
+    - Wrapper for lxc-destroy cleans up after container is removed
     - Supports LVM on TurnKey's default volume group 'turnkey'
     - Allows TurnKey Ansible appliance to manage LXC containers
     - Generic enough to be used on any LXC enabled distribution.

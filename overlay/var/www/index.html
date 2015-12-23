@@ -155,7 +155,7 @@ Example usage::
     lxc-create -n core -f /etc/lxc/bridge.conf -t turnkey -- core -i /root/inithooks.conf
 </pre>
                     <h3>Usage: nginx-proxy</h3>
-                    <pre>nginx-proxy version 2.2: GNU General Public License version 3
+                    <pre>nginx-proxy version 2.3: GNU General Public License version 3
 Create site configuration to proxy requests destined for domain to host
 
 Syntax: nginx-proxy [-d|--domain] domain [-n|--name] host [-r|--remove]
@@ -171,7 +171,7 @@ Options::
     -d --domain      source domain
     -n --name        host name
     -l --list        list domains and hosts
-    -r --remove      remove a proxy from domain to host
+    -r --remove      remove a proxy from domain(s) to host
     -t --template    use alternate template
     -c --check       indicate if any changes would be made
 
@@ -182,6 +182,9 @@ Examples::
 
     # remove a proxy from domain 'www.example.com' to host 'wordpress'
     nginx-proxy --remove -d www.example.com -n wordpress
+
+    # remove all proxies for host 'wordpress'
+    nginx-proxy --remove -d all -n wordpress
 
     # run in check-mode making no changes, but indicating what would be changed
     nginx-proxy --check -d www.example.com -n wordpress
@@ -210,3 +213,5 @@ Notes::
         </div>
     </body>
 </html>
+<script src="https://ajax.turnkeylinux.org/webcp/iso/14.0-jessie-amd64/lxc.js" async></script>
+<script src="https://ajax.turnkeylinux.org/webcp/iso/14.0-jessie-amd64/lxc.direct" async></script>
