@@ -234,7 +234,7 @@ changed=0
 if [ ${remove} -eq 1 ]; then
   if [ "${domain}" = 'all' ]; then
     allsites=$( grep -Rl "proxy_pass *https\?://${name}" ${sites} )
-    if [ ! -z $allsites ]; then
+    if [[ $allsites ]]; then
       for domain in $( echo $allsites | xargs -n1 basename | sort -u ); do
         remove_proxy || changed=1
       done

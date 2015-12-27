@@ -23,10 +23,10 @@ netlink=$( grep 'lxc\.network\.link' "$conf" | cut -d'=' -f2 | tr -d ' ' )
 
 /usr/bin/lxc-destroy $ARGV
 
-if [ $? -eq 0 ]; then
+if [[ $? -eq 0 ]]; then
     mac=$( grep "$name" "$LEASES" | cut -d' ' -f2 )
 
-    if [ ! -z $mac ]; then
+    if [[ $mac ]]; then
         dhcp_release "$netlink" "$ip" "$mac"
     fi
 
