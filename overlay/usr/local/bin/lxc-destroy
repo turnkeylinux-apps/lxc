@@ -18,21 +18,21 @@ while true; do
     shift
 done
 
-netlink=$( grep 'lxc\.network\.link' $conf | cut -d'=' -f2 | tr -d ' ' )
+ip=$( host "$name" | cut -d' ' -f4 )
+netlink=$( grep 'lxc\.network\.link' "$conf" | cut -d'=' -f2 | tr -d ' ' )
 
 /usr/bin/lxc-destroy $ARGV
 
-if [ $? -eq 0 ]; then
-    macip=$( grep $name $LEASES | cut -d' ' -f2-3 )
-    mac=$( echo $macip | cut -d' ' -f 1 )
-    ip=$( echo $macip | cut -d' ' -f 2 )
+if [[ $? -eq 0 ]]; then
+    mac=$( grep "$name" "$LEASES" | cut -d' ' -f2 )
 
-    dhcp_release $netlink $ip $mac
+    if [[ $mac ]]; then
+        dhcp_release "$netlink" "$ip" "$mac"
+    fi
 
-    nginx-proxy -r -d all -n $name
-
-    ssh-keygen -R $name
-    ssh-keygen -R $ip
+    nginx-proxy -r -d all -n "$name"
+    ssh-keygen -R "$name"
+    ssh-keygen -R "$ip"
 
     exit 0
 fi
