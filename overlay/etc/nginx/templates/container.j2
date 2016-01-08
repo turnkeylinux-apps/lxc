@@ -50,6 +50,7 @@ server {
 
     location / {
         include         /etc/nginx/include/proxy;
+        proxy_set_header Host $host:$server_port;
         proxy_pass      https://{{ nginx_proxy_host }}:12321;
     }
 }
