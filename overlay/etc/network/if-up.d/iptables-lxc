@@ -22,6 +22,7 @@ fi
 
 if [ "$IFACE" = "br0" ]; then
     # Allow inbound connections
+    iptables_add INPUT -i br0 -j ACCEPT
     iptables_add INPUT -p tcp --dport 22 -j ACCEPT #SSH
     iptables_add INPUT -p tcp --dport 53 -j ACCEPT #DNS
     iptables_add INPUT -p tcp --dport 80 -j ACCEPT #HTTP
@@ -31,7 +32,7 @@ if [ "$IFACE" = "br0" ]; then
     iptables_add INPUT -p tcp --dport 12320 -j ACCEPT #HTTPS
     iptables_add INPUT -p tcp --dport 12321 -j ACCEPT #HTTPS
     iptables_add INPUT -p tcp --dport 12322 -j ACCEPT #HTTPS
-
+    iptables_add FORWARD -i br0 -j ACCEPT
     iptables_add POSTROUTING -t nat -o br0 -j MASQUERADE
 fi
 
