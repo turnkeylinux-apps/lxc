@@ -16,6 +16,10 @@ top of that:
     - Insert specified inithooks.conf into container for preseeding.
     - Supports configuration of network link (e.g., br0, natbr0, none).
     - Supports configuration of apt proxy.
+    - Verifies GPG signatures when available
+    - Wrapper for lxc-destroy cleans up after container is removed
+    - Supports LVM on TurnKey's default volume group 'turnkey'
+    - Allows TurnKey Ansible appliance to manage LXC containers
     - Generic enough to be used on any LXC enabled distribution.
 
 - Easily expose NAT containers services:
@@ -26,7 +30,7 @@ top of that:
       domain to the container on the corresponding ports.
     - `iptables-nat`_: Expose a containers non-web (e.g., SSH) service
       to the network by configuring iptables on the host to forward the
-      traffic it recieves on port X to the container on port Y.
+      traffic it receives on port X to the container on port Y.
 
 - LXC appliance configurations:
 
@@ -38,6 +42,12 @@ top of that:
     - Includes TurnKey web control panel (convenience).
     - Includes example inithooks configuration for preseeding (convenience).
     - IP forwarding and control groups enabled.
+
+- LXC limitations:
+
+    - The LXC appliance cannot run in nested mode i.e. within an LXC container
+      without additional configuration. This mode is not recommended for
+      production systems because of security concerns.
 
 See the `Usage documentation`_ for further details.
 

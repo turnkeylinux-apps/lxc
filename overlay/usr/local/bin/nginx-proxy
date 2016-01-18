@@ -1,57 +1,266 @@
-#!/bin/bash -e
-# Copyright (c) Alon Swartz <alon@turnkeylinux.org>
+#!/bin/bash
+# /usr/local/bin/nginx-proxy
+# Copyright (C) 2015, John Carver <dude4linux@gmail.com>
+
+  # This program is free software: you can redistribute it and/or modify
+  # it under the terms of the GNU General Public License as published by
+  # the Free Software Foundation, either version 3 of the License, or
+  # (at your option) any later version.
+
+  # This program is distributed in the hope that it will be useful,
+  # but WITHOUT ANY WARRANTY; without even the implied warranty of
+  # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  # GNU General Public License at (http://www.gnu.org/licenses/) for
+  # more details.
+
+PROGNAME=$(basename $0)
+VERSION="2.3"
 
 info() { echo "INFO: $@"; }
-fatal() { echo "FATAL: $@" 1>&2; exit 1; }
+fatal() { echo "FATAL: $@" 1>&2; exit 2; }
 
 usage() {
-cat<<EOF
-Syntax: $(basename $0) domain container
-Create site configuration to proxy requests destined for domain to container
+cat <<EOF
+${PROGNAME} version ${VERSION}: GNU General Public License version 3
+Create site configuration to proxy requests destined for domain to host
+
+Syntax: ${PROGNAME} [-d|--domain] domain [-n|--name] host [-r|--remove]
 
 Arguments::
 
-    domain      source domain
-    container   destination container name
+    domain           source domain (fqdn)
+    host             destination host name
 
-Example::
+Options::
 
-    $(basename $0) www.example.com wordpress
+    -h --help        usage: display this message
+    -d --domain      source domain
+    -n --name        host name
+    -l --list        list domains and hosts
+    -r --remove      remove a proxy from domain(s) to host
+    -t --template    use alternate template
+    -c --check       indicate if any changes would be made
+
+Examples::
+
+    # create a proxy from domain 'www.example.com' to host 'wordpress' 
+    ${PROGNAME} --domain www.example.com --name wordpress
+
+    # remove a proxy from domain 'www.example.com' to host 'wordpress'
+    ${PROGNAME} --remove -d www.example.com -n wordpress
+
+    # remove all proxies for host 'wordpress'
+    ${PROGNAME} --remove -d all -n wordpress
+
+    # run in check-mode making no changes, but indicating what would be changed
+    ${PROGNAME} --check -d www.example.com -n wordpress
+
+Exit Codes::
+
+        0    no changes were made or would have been made (check-mode)
+        1    changes were made or would have been made (check-mode)
+        2    fatal error prevented command completion
 
 Notes::
 
-    # delete/disable site configuration for domain
-    rm -f /etc/nginx/sites-*/DOMAIN; /etc/init.d/nginx/reload
+    # also supports the v13.0 syntax
+    ${PROGNAME} www.example.com wordpress
 
-    # template (preconfigured for 80, 443, 12320, 12321, 12322)
-    /etc/nginx/sites-available/container.tmpl
+    # uses Jinja2 style templates for variable substitution
+    # default template (preconfigured for ports 80, 443)
+    /etc/nginx/templates/default.j2
+
+    # lxc template (preconfigured for ports 80, 443, 12320, 12321, 12322)
+    /etc/nginx/templates/container.j2
 
 EOF
-exit 1
 }
 
-if [[ "$#" != "2" ]]; then
+wait_for_host() {
+    # wait for host name resolution
+    # it does not mean that host is up
+    local hostname="$1"
+    local retries="${2:-10}"
+    local delay="${3:-3}"
+
+    for (( i=1; i<=${retries}; i++ )); do
+        host ${hostname} > /dev/null && return 0
+        sleep ${delay}
+    done
+    return 1
+}
+
+## remove proxy
+remove_proxy() {
+  local changed=0
+
+  # domain_cert and domain_key are considered placeholders
+  # which may have been replaced by registered certs/keys
+  # therefore we don't routinely remove them
+  domain_cert="/etc/ssl/certs/${domain}.pem"
+  domain_key="/etc/ssl/private/${domain}.key"
+
+  site_enabled="/etc/nginx/sites-enabled/${domain}"
+  site_available="/etc/nginx/sites-available/${domain}"
+
+  [ -f ${site_enabled} ]   && changed=1
+  [ -f ${site_available} ] && changed=1
+
+  if [ ${changed} -eq 1  ]; then
+    if [ ${check} -eq 0 ]; then
+      rm -f ${site_enabled}
+      rm -f ${site_available}
+
+      # remove domain entry from hosts.conf
+      sed -i "/^${proxy_ip}\s*${domain}/ d" ${hosts}
+
+      info "removed ${domain} proxy ${name}"
+    else
+      info "check-mode: would have removed ${domain} proxy ${name}"
+    fi
+  else
+    if [ ${check} -eq 0 ]; then
+      info "no change: ${domain} proxy ${name} does not exist"
+    else
+      info "check-mode: no change: ${domain} proxy ${name} does not exist"
+    fi
+  fi
+  return ${changed}
+}
+
+## create proxy
+create_proxy() {
+  local changed=0
+
+  domain_cert="/etc/ssl/certs/${domain}.pem"
+  domain_key="/etc/ssl/private/${domain}.key"
+  site_enabled="/etc/nginx/sites-enabled/${domain}"
+  site_available="/etc/nginx/sites-available/${domain}"
+
+  [ -f ${site_enabled} ]    || changed=1
+  [ -f ${site_available} ]  || changed=1
+  [ -f ${domain_cert} ]     || changed=1
+  [ -f ${domain_key} ]      || changed=1
+
+  if [ ${changed} -eq 1 ]; then
+    if [ ${check} -eq 0 ]; then
+      # if domain certificate doesn't exist, create one
+      [ -f ${domain_cert} ] || turnkey-make-ssl-cert ${domain}
+      [ -f ${domain_cert} ] || fatal "can't find ${domain_cert}"
+      [ -f ${domain_key} ]  || fatal "can't find ${domain_key}"
+
+      cp  ${template_dir}/${template} ${site_available}
+      sed -i "s|{{ nginx_domain_name }}|${domain}|;\
+              s|{{ nginx_proxy_host }}|${name}|;\
+              s|{{ nginx_domain_cert }}|${domain_cert}|;\
+              s|{{ nginx_domain_key }}|${domain_key}|" ${site_available}
+
+      [ -e "${site_enabled}" ]  || ln -s ${site_available} ${site_enabled}
+
+      # add domain entry to hosts.conf
+      grep -q "^${proxy_ip}\s\+${domain}" ${hosts} || printf "%-18s %s\n" ${proxy_ip} ${domain} >> ${hosts}
+
+      info "created ${domain} proxy ${name}"
+    else
+      info "check-mode: would have created ${domain} proxy ${name}"
+    fi
+  else
+    if [ ${check} -eq 0 ]; then
+      info "${domain} proxy ${name} exists, no change required"
+    else
+      info "check-mode: ${domain} proxy ${name} exists, no change required"
+    fi
+  fi
+  return ${changed}
+}
+
+## list proxies
+list_proxies() {
+  local name
+  local domain
+
+  for site in ${sites}/*; do
+    domain=$(basename ${site})
+    [ "${domain}" == "default" ] && continue
+    name=$(sed -n "0,/proxy_pass/ s|^.*proxy_pass.*://\(.*\)/\?;.*$|\1|p" ${site})
+    if [ "${name}" != "" ]; then
+     printf "%-20s %s\n" ${domain} ${name}
+    fi
+  done
+}
+
+# vars
+sites="/etc/nginx/sites-available"
+hosts="/etc/hosts.dnsmasq"
+proxy_ip="$(hostname -I | awk '/$/ { print $1 }')"
+template_dir="/etc/nginx/templates"
+template="default.j2"
+
+# if lxc appliance, use container template
+[[ "$(turnkey-version)" =~ "turnkey-lxc" ]] && template="container.j2"
+
+remove=0
+check=0
+
+# must have one or more arguments
+if [ $# -eq 0 ]; then
     usage
+    exit 2
 fi
 
-domain=$1
-container=$2
+while [[ -n $1 ]]; do
+    case "$1" in
+        -h|--help)      usage; exit 0 ;;
+        -d|--domain)    domain="$2"; shift ;;
+        -n|--name)      name="$2"; shift ;;
+        -l|--list)      list_proxies; exit 0 ;;
+        -r|--remove)    remove=1 ;;
+        -t|--template)  template="$2"; shift ;;
+        -c|--check)     check=1 ;;
+         *)             domain="$1"; name="$2"; shift 2; break ;;
+    esac
+    shift
+done
 
-template=/etc/nginx/sites-available/container.tmpl
-container_rootfs=/var/lib/lxc/$container/rootfs
-site_enabled=/etc/nginx/sites-enabled/$domain
-site_available=/etc/nginx/sites-available/$domain
+# should only have zero arguments here, 
+# domain and container name must not be null
+if [[ $# -ne 0 || -z "${domain}" || -z "${name}" ]]; then
+  usage
+  exit 2
+fi
 
-[ -e "$template" ] || fatal "does not exist: $template"
-[ -e "$site_enabled" ] && fatal "already exists: $site_enabled"
-[ -e "$site_available" ] && fatal "already exists: $site_available"
-[ -e "$container_rootfs" ] || fatal "does not exist: $container_rootfs"
+changed=0
 
-cp $template $site_available
-sed -i "s|DOMAIN|$domain|" $site_available
-sed -i "s|CONTAINER|$container|" $site_available
-ln -s $site_available $site_enabled
-/etc/init.d/nginx reload
+if [ ${remove} -eq 1 ]; then
+  if [ "${domain}" = 'all' ]; then
+    allsites=$( grep -Rl "proxy_pass *https\?://${name}" ${sites} )
+    if [[ $allsites ]]; then
+      for domain in $( echo $allsites | xargs -n1 basename | sort -u ); do
+        remove_proxy || changed=1
+      done
+    fi
+  else
+    remove_proxy || changed=1
+  fi
+else
+  # prepare to create proxy
+  # make sure template exists
+  [ -e "${template_dir}/${template}" ] || fatal "does not exist: ${template}"
 
-info "created $site_enabled"
+  # check to see if host exists
+  wait_for_host ${name}
+  if [ $? -ne 0 ]; then
+    if [ ${check} -eq 0 ]; then
+      fatal "can't create proxy; host ${name} doesn't exist"
+    else
+      info "check-mode: can't create proxy; host ${name} doesn't exist"
+      exit 0
+    fi
+  fi
+  create_proxy || changed=1
+fi 
+
+service dnsmasq reload
+service nginx reload
+exit ${changed}
 

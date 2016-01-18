@@ -1,13 +1,44 @@
 #!/bin/bash -ex
 
-# enable ip forwarding
-sed -i "/^#net.ipv4.ip_forward=1/ s/#//" /etc/sysctl.conf
+# modify kernel settings recommended for firewalls
+# enable source spoofing protection
+sed -i '/net.ipv4.conf.all.rp_filter/ {s/^#//; s/0/1/;}' /etc/sysctl.conf
+# enable SYN cookies
+sed -i '/net.ipv4.tcp_syncookies/ {s/^#//; s/0/1/;}' /etc/sysctl.conf
+# enable packet forwarding for IPv4
+sed -i '/net.ipv4.ip_forward/ {s/^#//; s/0/1/;}' /etc/sysctl.conf
+# do not accept ICMP redirects (prevent MITM attacks)
+sed -i '/net.ipv4.conf.all.accept_redirects/ {s/^#//; s/1/0/;}' /etc/sysctl.conf
+# do not send ICMP redirects (we are not a router)
+sed -i '/net.ipv4.conf.all.send_redirects/ {s/^#//; s/1/0/;}' /etc/sysctl.conf
+# do not accept IP source route packets (we are not a router)
+sed -i '/net.ipv4.conf.all.accept_source_route/ {s/^#//; s/1/0/;}' /etc/sysctl.conf
+# log martian packets
+sed -i '/net.ipv4.conf.all.log_martians/ {s/^#//; s/0/1/;}' /etc/sysctl.conf
+# disable TCP timestamps
+sed -i '/net.ipv4.tcp_timestamps/ {s/^#//; s/1/0/;}' /etc/sysctl.conf
 
-# change webshell and webmin listening ports
-sed -i "s|^SHELLINABOX_PORT=12320|SHELLINABOX_PORT=22320|" /etc/default/shellinabox
-sed -i "s|^port=12321|port=22321|" /etc/webmin/miniserv.conf
+cat << EOF  >> /etc/sysctl.conf
+# Drop ICMP echo-requests sent to broadcast/multi-cast addresses
+net.ipv4.icmp_echo_ignore_broadcasts = 1
+#
+# Reduce TCP FIN timeout to protect against DoS attacts
+net.ipv4.tcp_fin_timeout = 15
+#
+EOF
+
+# change webshell and webmin listening ports in stunnel4
+sed -i 's|^\(accept *= *\)1\(232[01]\)|\12\2|g' /etc/stunnel/stunnel.conf
+
+# remove ssl certificates from ssl include
+# allow nginx proxy to use container certs and keys
+sed -i "/^ssl_certificate.*/ d" /etc/nginx/include/ssl
 
 # configure apt-cacher-ng to bind to natbr0
 CONF=/etc/apt-cacher-ng/acng.conf
 sed -i "s|MainInterface|MainInterface\nBindAddress: 192.168.121.1|" $CONF
+
+# disable stunnel and use nginx instead
+service stunnel4 stop
+update-rc.d stunnel4 disable
 

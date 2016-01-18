@@ -4,7 +4,22 @@ lxc
 dnsmasq
 dnsmasq-utils
 bridge-utils
-
 nginx
 apt-cacher-ng
 
+/* required by lxc download template */
+xz-utils
+
+/* required by lxc ubuntu template */
+debootstrap
+ubuntu-archive-keyring
+
+/* required by rpm based distributions */
+rpm
+yum
+
+/* required for ansible compatibility */
+aptitude
+python-apt
+python-httplib2
+bzip2

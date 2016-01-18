@@ -1,4 +1,16 @@
-turnkey-lxc-13.0 (1) turnkey; urgency=low
+turnkey-lxc-14.0 (1) turnkey; urgency=low
+
+  * v14.0 release
+
+    - Latest upstream version of LXC
+    - Let lxc-create handle network configuration (-f option)
+    - Use Proxmox images for v14.x containers
+    - Use Openvz images for v13.0 containers
+    - Verify gpg signatures of downloaded images
+    - Added support for default lvm volume group 'turnkey'
+    - Updated nginx-proxy to support v14.0 certs and lvm backing store
+    - Added lxc-destroy wrapper to cleanup after container is removed
+    - Allows Ansible appliance to manage LXC containers
 
   * Initial public release of TurnKey LXC.
 

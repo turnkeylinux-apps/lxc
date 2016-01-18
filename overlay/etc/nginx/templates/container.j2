@@ -1,0 +1,71 @@
+server {
+    listen              80;
+    server_name         {{ nginx_domain_name }};
+
+    location / {
+        include         /etc/nginx/include/proxy;
+        proxy_pass      http://{{ nginx_proxy_host }};
+    }
+}
+
+server {
+    listen              443 ssl;
+    server_name         {{ nginx_domain_name }};
+
+    include             /etc/nginx/include/ssl;
+    ssl_certificate     {{ nginx_domain_cert }};
+    ssl_certificate_key {{ nginx_domain_key }};
+
+    location / {
+        include         /etc/nginx/include/proxy;
+        proxy_pass      https://{{ nginx_proxy_host }};
+    }
+}
+
+server {
+    listen              12320 ssl;
+    server_name         {{ nginx_domain_name }};
+
+    include             /etc/nginx/include/ssl;
+    ssl_certificate     {{ nginx_domain_cert }};
+    ssl_certificate_key {{ nginx_domain_key }};
+
+    # shellinabox requires http version 1.1
+    location / {
+        include         /etc/nginx/include/proxy;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_pass      https://{{ nginx_proxy_host }}:12320;
+    }
+}
+
+server {
+    listen              12321 ssl;
+    server_name         {{ nginx_domain_name }};
+
+    include             /etc/nginx/include/ssl;
+    ssl_certificate     {{ nginx_domain_cert }};
+    ssl_certificate_key {{ nginx_domain_key }};
+
+    location / {
+        include         /etc/nginx/include/proxy;
+        proxy_set_header Host $host:$server_port;
+        proxy_pass      https://{{ nginx_proxy_host }}:12321;
+    }
+}
+
+server {
+    listen              12322 ssl;
+    server_name         {{ nginx_domain_name }};
+
+    include             /etc/nginx/include/ssl;
+    ssl_certificate     {{ nginx_domain_cert }};
+    ssl_certificate_key {{ nginx_domain_key }};
+
+    location / {
+        include         /etc/nginx/include/proxy;
+        proxy_pass      https://{{ nginx_proxy_host }}:12322;
+    }
+}
+
