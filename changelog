@@ -1,24 +1,40 @@
 turnkey-lxc-14.0 (1) turnkey; urgency=low
 
-  * v14.0 release
+  * Latest upstream version of LXC
 
-    - Latest upstream version of LXC
+  * Security: verify gpg signatures of downloaded images
+
+  * Ansible integration: allows Ansible appliance to manage LXC containers
+
+  * Improved lxc admin tools
+
     - Let lxc-create handle network configuration (-f option)
+    - Added lxc-destroy wrapper to cleanup after container is removed
+    - added -x|--aptproxy option to lxc-turnkey, updated docs
+
+  * TurnKey v14.0 support
+
     - Use Proxmox images for v14.x containers
     - Use Openvz images for v13.0 containers
-    - Verify gpg signatures of downloaded images
-    - Added support for default lvm volume group 'turnkey'
-    - Updated nginx-proxy to support v14.0 certs and lvm backing store
-    - Added lxc-destroy wrapper to cleanup after container is removed
-    - Allows Ansible appliance to manage LXC containers
+
+  * Added support for default lvm volume group 'turnkey'
+
+  * Updated nginx-proxy to support v14.0 certs and lvm backing store
+
+  * Note: Please refer to turnkey-core's changelog for changes common to all
+    appliances. Here we only describe changes specific to this appliance.
+
+ -- Liraz Siri <liraz@turnkeylinux.org>  Tue, 19 Jan 2016 21:26:00 +0200
+
+turnkey-lxc-13.0 (1) turnkey; urgency=low
 
   * Initial public release of TurnKey LXC.
 
   * LXC related:
 
     - Generic TurnKey LXC template for downloading and creating a 
-      container of any TurnKey appliance, supporting preseeding,
-      customization of network link and apt proxy.
+      container of any TurnKey appliance, supporting preseeding and
+      customization of network link.
     - Custom nginx-proxy script for exposing containers web services.
     - Changed webshell port to 22320 to support nginx-proxy.
     - Changed webmin port to 22321 to support nginx-proxy.
@@ -26,7 +42,6 @@ turnkey-lxc-14.0 (1) turnkey; urgency=low
     - Preconfigured network bridge interface.
     - Preconfigured network NAT bridge interface.
     - Preconfigured dnsmasq on NAT interface pricing DHCP and DNS.
-    - Preconfigured apt-cacher-ng binding to NAT interface.
     - Preconfigured to support IP forwarding.
     - Inithook to setup and enable control groups.
     - Includes TurnKey web control panel.
@@ -36,4 +51,3 @@ turnkey-lxc-14.0 (1) turnkey; urgency=low
     appliances. Here we only describe changes specific to this appliance.
 
  -- Alon Swartz <alon@turnkeylinux.org>  Thu, 12 Dec 2013 16:20:32 +0200
-
