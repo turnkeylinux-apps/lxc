@@ -1,5 +1,8 @@
 turnkey-lxc-14.0 (1) turnkey; urgency=low
 
+  * Credits: Special thanks to John Carver and Anton Pyrogovskyi who made this
+    release possible.
+    
   * Latest upstream version of LXC
 
   * Security: verify gpg signatures of downloaded images
