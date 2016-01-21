@@ -1,11 +1,12 @@
-LXC - Linux Containers
-======================
+TurnKey LXC LinuX Containers - 1 host, multiple TurnKey apps
+============================================================
 
-`LXC`_ AKA Linux Containers is a lightweight virtualization system
-supported natively by the Linux kernel. This "meta" appliance makes it
-easy to use LXC to run multiple TurnKey appliances on single server or
-virtual machine while maintaining secure isolation and resource
-allocation.
+TurnKey LXC simplifies downloading and deploying multiple TurnKey apps
+side-by-side on the same host in securely isolated lightweight
+containers while handling tricky details such as network routing.
+`LXC`_ (AKA LinuX Containers) is the rising star lightweight
+virtualization technology that powers Docker and other next generation
+software deployment platforms.
 
 This appliance includes all the standard features in `TurnKey Core`_, and on
 top of that:
@@ -56,7 +57,7 @@ Credentials *(passwords set at first boot)*
 
 -  Webmin, SSH: username **root**
 
-.. _LXC: http://linuxcontainers.org
+.. _LXC: https://linuxcontainers.org
 .. _TurnKey Core: https://www.turnkeylinux.org/core
 .. _TurnKey LXC template: https://github.com/turnkeylinux-apps/lxc/blob/master/overlay/usr/share/lxc/templates/lxc-turnkey
 .. _nginx-proxy: https://github.com/turnkeylinux-apps/lxc/blob/master/overlay/usr/local/bin/nginx-proxy
