@@ -3,36 +3,37 @@
 
 ARGV=$@
 
-LEASES=/var/lib/misc/dnsmasq.leases
+info() { echo "INFO: $@"; }
+fatal() { echo "FATAL: $@" 1>&2; exit 1; }
 
 name=
 conf=
 
-while true; do
-    if [[ $1 == *n* ]]; then
-        shift
-        name="$1"
-        conf="/var/lib/lxc/$name/config"
-        break
-    fi
+while [[ -n $1 ]]; do
+    case "$1" in
+        -n|--name)      name="$2"; break ;;
+    esac
     shift
 done
 
+[[ "$name" == "" ]] && fatal "must provide container name [-n|--name]"
+
+conf="/var/lib/lxc/$name/config"
+
 ip=$( host "$name" | cut -d' ' -f4 )
 netlink=$( grep 'lxc\.network\.link' "$conf" | cut -d'=' -f2 | tr -d ' ' )
+mac=$( grep 'lxc\.network\.hwaddr' "$conf" | cut -d'=' -f2 | tr -d ' ' )
 
 /usr/bin/lxc-destroy $ARGV
 
 if [[ $? -eq 0 ]]; then
-    mac=$( grep "$name" "$LEASES" | cut -d' ' -f2 )
-
-    if [[ $mac ]]; then
+    if [[ "$netlink" == "natbr0" ]]; then
         dhcp_release "$netlink" "$ip" "$mac"
     fi
 
     nginx-proxy -r -d all -n "$name"
-    ssh-keygen -R "$name"
-    ssh-keygen -R "$ip"
+    ssh-keygen -R "$name"  >/dev/null 2>&1
+    ssh-keygen -R "$ip"    >/dev/null 2>&1
 
     exit 0
 fi
