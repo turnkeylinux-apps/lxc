@@ -304,6 +304,10 @@ configure_turnkey() {
     # ensure inithooks.conf is executable by root
     chmod 0700 ${rootfs}/etc/inithooks.conf
 
+    info "patch container for sysvinit"
+    sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init/cgmanager.conf
+    sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init.d/cgmanager
+
     info "enabling rootpass inithook..."
     chmod +x ${rootfs}/usr/lib/inithooks/firstboot.d/30rootpass
 
