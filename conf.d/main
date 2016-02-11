@@ -42,3 +42,6 @@ sed -i "s|MainInterface|MainInterface\nBindAddress: 192.168.121.1|" $CONF
 service stunnel4 stop
 update-rc.d stunnel4 disable
 
+# copy sysv init script to systemd autostart helper
+cp /etc/init.d/lxc /usr/lib/x86_64-linux-gnu/lxc/lxc-autostart-helper
+
