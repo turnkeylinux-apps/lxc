@@ -473,7 +473,7 @@ Arguments::
 Options::
 
     -a --arch=       Appliance architecture (default: hosts architecture)
-    -v --version=    Appliance version (default: 14.0-jessie)
+    -v --version=    Appliance version (default: 14.1-jessie)
     -x --aptproxy=   Address of APT Proxy (e.g., http://192.168.121.1:3142)
 
     -i --inithooks=  Path to inithooks.conf (default: /root/inithooks.conf)
@@ -505,7 +505,7 @@ eval set -- "$OPTIONS"
 app_name="core"
 arch=$(dpkg --print-architecture)
 hostarch=${arch}
-version="14.0-jessie"
+version="14.1-jessie"
 inithooks="/root/inithooks.conf"
 
 while true; do
