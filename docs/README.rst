@@ -21,7 +21,7 @@ the template. For example, to show the templates usage we could run::
     Options::
 
         -a --arch=       Appliance architecture (default: hosts architecture)
-        -v --version=    Appliance version (default: 14.0-jessie)
+        -v --version=    Appliance version (default: 14.2-jessie)
         -x --aptproxy=   Address of APT Proxy (e.g., http://192.168.121.1:3142)
 
         -i --inithooks=  Path to inithooks.conf (e.g., /root/inithooks.conf)
