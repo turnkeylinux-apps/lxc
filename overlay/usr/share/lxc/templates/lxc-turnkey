@@ -205,7 +205,7 @@ configure_debian_systemd() {
 verify_signature() {
     local cache=$1
     local image=$2
-    local sig=${cache}/${image}.sig
+    local sig=${cache}/${image}.${ext}
     local keyid="A16EB94D"
     local keyring="/etc/apt/trusted.gpg.d/turnkey.gpg"
 
@@ -216,7 +216,7 @@ verify_signature() {
         info "verifying gpg signature..."
         gpg --keyring ${keyring} --verify ${sig}
         if [ $? -ne 0 ]; then  
-            fatal "${image}.sig gpg verification failed"
+            fatal "${image}.${ext} gpg verification failed"
         fi
 
         info "verifying checksum..."
@@ -236,7 +236,7 @@ cleanup() {
     local image=$2
 
     rm -rf ${cache}/${image}.tmp
-    rm -rf ${cache}/${image}.sig
+    rm -rf ${cache}/${image}.${ext}
     rm -rf ${cache}/${image}
 }
 
@@ -268,7 +268,7 @@ download_image() {
         fatal "failed to download '${image}'"
     else
         mv ${cache}/${image}.tmp ${cache}/${image}
-        wget --read-timeout=10 -t 3 -c ${imagesurl}/${image}.sig -O ${cache}/${image}.sig
+        wget --read-timeout=10 -t 3 -c ${imagesurl}/${image}.${ext} -O ${cache}/${image}.${ext}
         return $?
     fi
 }
@@ -279,7 +279,7 @@ extract_image() {
     local rootfs=$3
 
     # if signature file exists, verify image
-    if [ -f ${cache}/${image}.sig ]; then
+    if [ -f ${cache}/${image}.${ext} ]; then
         verify_signature ${cache} ${image}
     fi
 
@@ -579,6 +579,13 @@ if [ -z "${rootfs}" ]; then
 fi
 
 image=$(get_image_name ${deb_version} ${app_name} ${tkl_version} ${arch})
+
+case "${tkl_version}" in
+    13.0)	ext="sig";;
+    14.0)	ext="sig";;
+    14.1)	ext="sig";;
+       *)	ext="hash";;
+esac
 
 install_turnkey ${image} ${rootfs}
 [ $? -ne 0 ] && fatal "failed to install turnkey ${app_name}"
