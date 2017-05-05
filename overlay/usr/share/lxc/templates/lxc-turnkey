@@ -554,8 +554,9 @@ type debootstrap
 
 case "${version}" in
     12.[0-1]-squeeze) fatal "turnkey version ${version} is no longer supported:";;
-    13.0-wheezy)      deb_version="debian-7";;
-    14.[0-9]-jessie)  deb_version="debian-8";;
+    13.0-wheezy)      fatal "turnkey version ${version} is no longer supported:";;
+    14.0-wheezy)      fatal "turnkey version ${version} is no longer supported:";;
+    14.[1-9]-jessie)  deb_version="debian-8";;
     15.[0-9]-stretch) deb_version="debian-9";;
                    *) fatal "turnkey version ${version} is not recognized:"
 esac
