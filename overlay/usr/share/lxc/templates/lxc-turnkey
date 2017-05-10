@@ -401,7 +401,7 @@ EOF
     # associated hwaddr.
     nics=`grep -e '^lxc\.network\.type[ \t]*=[ \t]*veth' ${path}/config | wc -l`
     if [ $nics -eq 1 ]; then
-        grep -q "^lxc.network.hwaddr" ${path}/config || sed -i -e "/^lxc\.network\.type[ \t]*=[ \t]*veth/a lxc.network.hwaddr = 00:16:3e:$(openssl rand -hex 3| sed 's/\(..\)/\1:/g; s/.$//')" ${path}/config
+        grep -q "^lxc.network.hwaddr" ${path}/config || sed -i -e "/^lxc\.network\.type[ \t]*=[ \t]*veth/a lxc.network.hwaddr = 2a:5b:8e:$(openssl rand -hex 3| sed 's/\(..\)/\1:/g; s/.$//')" ${path}/config
     fi
 
     [ ! -f ${path}/config ] && warn "failed to add configuration"
