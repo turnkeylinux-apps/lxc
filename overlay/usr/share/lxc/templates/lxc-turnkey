@@ -314,6 +314,7 @@ configure_turnkey() {
     local rootfs=$1
     local inithooks=$2
     local aptproxy=$3
+    local stunnel_conf=${rootfs}/etc/stunnel/stunnel.conf
 
     info "inserting inithooks.conf..."
     cp ${inithooks} ${rootfs}/etc/inithooks.conf
@@ -323,6 +324,28 @@ configure_turnkey() {
     info "patch container for sysvinit"
     sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init/cgmanager.conf
     sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init.d/cgmanager
+
+    info "patch container for stunnel"
+    if ! sed -n '/^\[shellinabox\]/,/^\[/ p' ${stunnel_conf} | grep -q "TIMEOUTclose"
+    then
+      info "updating section [shellinabox]..."
+      sed -ie '/^\[shellinabox\]/,/^\[/ {
+        :a
+        n
+        /./b a
+        i\
+TIMEOUTclose = 0
+      }' ${stunnel_conf}
+    fi;
+
+    if ! sed -n '/^\[webmin\]/,$ p' ${stunnel_conf} | grep -q "TIMEOUTclose"
+    then
+      info "updating section [webmin]..."
+      sed -ie '/^\[webmin\]/,$ {
+        $ a\
+TIMEOUTclose = 0
+      }' ${stunnel_conf}
+    fi;
 
     info "enabling rootpass inithook..."
     chmod +x ${rootfs}/usr/lib/inithooks/firstboot.d/30rootpass
