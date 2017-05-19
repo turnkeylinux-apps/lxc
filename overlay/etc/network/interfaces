@@ -3,7 +3,6 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet manual
-    dns-search local.lxc
 
 auto br0
 iface br0 inet dhcp
