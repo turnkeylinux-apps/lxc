@@ -7,12 +7,14 @@ turnkey-lxc-14.2 (1) turnkey; urgency=low
     - download signature first and update only when it has changed
     - flag obsolete versions, 13.0 and 14.0, which have been removed
       from the TurnKey mirrors
+    - issue local, unicast MAC addresses instead of global addresses
+    - patch containers for stunnel timeout
 
   * Security
     - verify gpg signatures using sha512sum
     - handle old .sig and new .hash signatures
 
- -- John Carver <dude4linux@gmail.com>  Sat, 06 May 2017 01:06:21 +0000
+ -- John Carver <dude4linux@gmail.com>  Fri, 19 May 2017 14:07:37 +0000
 
 turnkey-lxc-14.1 (1) turnkey; urgency=low
 
