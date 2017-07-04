@@ -10,6 +10,9 @@
 # Modified for TurnKey GNU/Linux:
 # John Carver <dude4linux@gmail.com>
 
+# Updated for TurnKey GNU/Linux version 14.2:
+# John Carver <dude4linux@gmail.com>
+
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
 # License as published by the Free Software Foundation; either
@@ -44,6 +47,7 @@ ARCHIVE_MIRROR=${ARCHIVE_MIRROR:-http://archive.turnkeylinux.org/debian}
 LOCALSTATEDIR="/var"
 LXC_TEMPLATE_CONFIG="/usr/share/lxc/config"
 LEASES="/var/lib/misc/dnsmasq.leases"
+TMP="/tmp"
 
 info() { echo "INFO [$(basename $0)]: $@"; }
 warn() { echo "WARN [$(basename $0)]: $@" 1>&2; return 1; }
@@ -203,28 +207,38 @@ configure_debian_systemd() {
 }
 
 verify_signature() {
-    local cache=$1
-    local image=$2
-    local sig=${cache}/${image}.sig
+    local location="$1"
+    local image="$2"
+    local signature="$3"
     local keyid="A16EB94D"
     local keyring="/etc/apt/trusted.gpg.d/turnkey.gpg"
 
+    [ ! -f "${location}/${image}" ] && fatal "image ${location}/${image} not found"
+    [ ! -f "${location}/${signature}" ] && fatal "signature ${location}/${signature} not found"
+
     if [[ "${image}" =~ "debian-7" ]]; then
         info "verifying image..."
-        gpg --keyring ${keyring} --verify ${sig} ${cache}/${image}
+        gpg --keyring ${keyring} --verify ${location}/${signature} ${location}/${image}
     else
         info "verifying gpg signature..."
-        gpg --keyring ${keyring} --verify ${sig}
+        gpg --keyring ${keyring} --verify ${location}/${signature}
         if [ $? -ne 0 ]; then  
-            fatal "${image}.sig gpg verification failed"
+            fatal "${signature} gpg verification failed"
         fi
 
         info "verifying checksum..."
-        sum1=$(sha1sum  ${cache}/${image} | cut -d " " -f 1)
-        sum2=$(grep -A 1 sha1sum ${sig} | tail -n 1 | sed "s/^ *//")
-        if [ ! "$sum1" == "$sum2" ]; then
-            fatal "${image} checksum verification failed"
+        cd ${location}
+        if [[ "${signature}" =~ ".sig" ]]; then
+            sum=$(grep -A 1 sha1sum ${signature} | tail -n 1 | sed "s/^ *//")
+            echo "${sum} ${image}" | sha1sum --status -c -
+            [ $? -ne 0 ] && fatal "${image} checksum verification failed"
+        elif [[ "${signature}" =~ ".hash" ]]; then
+            sha512sum --status -c "${signature}"
+            [ $? -ne 0 ] && fatal "${image} checksum verification failed"
+        else
+            fatal "${signature} unknown checksum type"
         fi
+        cd -
     fi
 
     info "verified successfully"
@@ -232,12 +246,10 @@ verify_signature() {
 }
 
 cleanup() {
-    local cache=$1
-    local image=$2
-
-    rm -rf ${cache}/${image}.tmp
-    rm -rf ${cache}/${image}.sig
-    rm -rf ${cache}/${image}
+    info "removing temporary files..."
+    rm -f ${TMP}/${image}
+    rm -f ${TMP}/${signature}
+    return 0
 }
 
 get_image_name() {
@@ -250,39 +262,43 @@ get_image_name() {
     echo ${name}
 }
 
+download_signature() {
+    info "downloading appliance signature..."
+    wget --read-timeout=10 -t 3 -nv -c ${baseurl}/${signature} -O ${TMP}/${signature}
+    if [ $? -ne 0 ]; then
+        verify_signature ${cache} ${image} ${signature}
+    elif cmp -s "${TMP}/${signature}" "${cache}/${signature}" ; then
+        info "no change in appliance signature...using cached image..."
+        if [ -f "${cache}/${image}" ]; then
+            verify_signature ${cache} ${image} ${signature}
+        else
+            download_image
+        fi
+    else
+        download_image
+    fi
+    cleanup
+    return 0
+}
+
 download_image() {
-    local cache=$1
-    local version=$2
-    local image=$3
+    # make sure that signature file has been downloaded to ${TMP}
+    [ ! -f "${TMP}/${signature}" ] && fatal "signature ${TMP}/${signature} not found"
 
     info "downloading appliance image..."
-    mkdir -p ${cache}
-    if [ "${version}" == "13.0-wheezy" ]; then
-      imagesurl="${TURNKEY_MIRROR}/images/openvz"
+    wget --read-timeout=10 -t 3 -nv -c ${baseurl}/${image} -O ${TMP}/${image}
+    if [ $? -eq 0 ]; then
+        verify_signature ${TMP} ${image} ${signature}
+        mv ${TMP}/${image} ${cache}/${image}
+        mv ${TMP}/${signature} ${cache}/${signature}
     else
-      imagesurl="${TURNKEY_MIRROR}/images/proxmox"
-    fi
-    wget --read-timeout=10 -t 3 -c ${imagesurl}/${image} -O ${cache}/${image}.tmp
-    if [ $? -ne 0 ]; then
-        cleanup ${cache} ${image}
+        cleanup
         fatal "failed to download '${image}'"
-    else
-        mv ${cache}/${image}.tmp ${cache}/${image}
-        wget --read-timeout=10 -t 3 -c ${imagesurl}/${image}.sig -O ${cache}/${image}.sig
-        return $?
     fi
+    return 0
 }
 
 extract_image() {
-    local cache=$1
-    local image=$2
-    local rootfs=$3
-
-    # if signature file exists, verify image
-    if [ -f ${cache}/${image}.sig ]; then
-        verify_signature ${cache} ${image}
-    fi
-
     info "extracting appliance image..."
     mkdir -p ${rootfs}
     tar --numeric-owner -zxf ${cache}/${image} -C ${rootfs}/
@@ -298,6 +314,7 @@ configure_turnkey() {
     local rootfs=$1
     local inithooks=$2
     local aptproxy=$3
+    local stunnel_conf=${rootfs}/etc/stunnel/stunnel.conf
 
     info "inserting inithooks.conf..."
     cp ${inithooks} ${rootfs}/etc/inithooks.conf
@@ -307,6 +324,28 @@ configure_turnkey() {
     info "patch container for sysvinit"
     sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init/cgmanager.conf
     sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init.d/cgmanager
+
+    info "patch container for stunnel"
+    if ! sed -n '/^\[shellinabox\]/,/^\[/ p' ${stunnel_conf} | grep -q "TIMEOUTclose"
+    then
+      info "updating section [shellinabox]..."
+      sed -ie '/^\[shellinabox\]/,/^\[/ {
+        :a
+        n
+        /./b a
+        i\
+TIMEOUTclose = 0
+      }' ${stunnel_conf}
+    fi;
+
+    if ! sed -n '/^\[webmin\]/,$ p' ${stunnel_conf} | grep -q "TIMEOUTclose"
+    then
+      info "updating section [webmin]..."
+      sed -ie '/^\[webmin\]/,$ {
+        $ a\
+TIMEOUTclose = 0
+      }' ${stunnel_conf}
+    fi;
 
     info "enabling rootpass inithook..."
     chmod +x ${rootfs}/usr/lib/inithooks/firstboot.d/30rootpass
@@ -330,9 +369,6 @@ configure_turnkey() {
 }
 
 install_turnkey() {
-    local cache="$LOCALSTATEDIR/cache/lxc/turnkey"
-    local image=$1
-    local rootfs=$2
 
     mkdir -p $LOCALSTATEDIR/lock/subsys/
     (
@@ -342,12 +378,8 @@ install_turnkey() {
             return 1
         fi
 
-        info "checking cache download in ${cache}/${image} ... "
-        if [ ! -e "${cache}/${image}" ]; then
-            download_image ${cache} ${version} ${image}
-        fi
-
-        extract_image ${cache} ${image} ${rootfs}
+        download_signature
+        extract_image
 
         return 0
 
@@ -392,7 +424,7 @@ EOF
     # associated hwaddr.
     nics=`grep -e '^lxc\.network\.type[ \t]*=[ \t]*veth' ${path}/config | wc -l`
     if [ $nics -eq 1 ]; then
-        grep -q "^lxc.network.hwaddr" ${path}/config || sed -i -e "/^lxc\.network\.type[ \t]*=[ \t]*veth/a lxc.network.hwaddr = 00:16:3e:$(openssl rand -hex 3| sed 's/\(..\)/\1:/g; s/.$//')" ${path}/config
+        grep -q "^lxc.network.hwaddr" ${path}/config || sed -i -e "/^lxc\.network\.type[ \t]*=[ \t]*veth/a lxc.network.hwaddr = 2a:5b:8e:$(openssl rand -hex 3| sed 's/\(..\)/\1:/g; s/.$//')" ${path}/config
     fi
 
     [ ! -f ${path}/config ] && warn "failed to add configuration"
@@ -441,8 +473,6 @@ EOF
 }
 
 clean() {
-    local cache="$LOCALSTATEDIR/cache/lxc/turnkey"
-
     if [ ! -e ${cache} ]; then
         exit 0
     fi
@@ -473,7 +503,7 @@ Arguments::
 Options::
 
     -a --arch=       Appliance architecture (default: hosts architecture)
-    -v --version=    Appliance version (default: 14.0-jessie)
+    -v --version=    Appliance version (default: 14.2-jessie)
     -x --aptproxy=   Address of APT Proxy (e.g., http://192.168.121.1:3142)
 
     -i --inithooks=  Path to inithooks.conf (default: /root/inithooks.conf)
@@ -505,7 +535,7 @@ eval set -- "$OPTIONS"
 app_name="core"
 arch=$(dpkg --print-architecture)
 hostarch=${arch}
-version="14.0-jessie"
+version=$(cat /etc/turnkey_version | cut -d'-' -f3,4)
 inithooks="/root/inithooks.conf"
 
 while true; do
@@ -550,8 +580,9 @@ type debootstrap
 
 case "${version}" in
     12.[0-1]-squeeze) fatal "turnkey version ${version} is no longer supported:";;
-    13.0-wheezy)      deb_version="debian-7";;
-    14.[0-9]-jessie)  deb_version="debian-8";;
+    13.0-wheezy)      fatal "turnkey version ${version} is no longer supported:";;
+    14.0-wheezy)      fatal "turnkey version ${version} is no longer supported:";;
+    14.[1-9]-jessie)  deb_version="debian-8";;
     15.[0-9]-stretch) deb_version="debian-9";;
                    *) fatal "turnkey version ${version} is not recognized:"
 esac
@@ -578,7 +609,23 @@ if [ -z "${rootfs}" ]; then
     rootfs=${rootfs:-${path}/rootfs}
 fi
 
+if [ "${version}" == "13.0-wheezy" ]; then
+    baseurl="${TURNKEY_MIRROR}/images/openvz"
+else
+    baseurl="${TURNKEY_MIRROR}/images/proxmox"
+fi
+
+cache="$LOCALSTATEDIR/cache/lxc/turnkey"
+mkdir -p ${cache}
+
 image=$(get_image_name ${deb_version} ${app_name} ${tkl_version} ${arch})
+
+case "${tkl_version}" in
+    13.0)	signature="${image}.sig";;
+    14.0)	signature="${image}.sig";;
+    14.1)	signature="${image}.sig";;
+       *)	signature="${image}.hash";;
+esac
 
 install_turnkey ${image} ${rootfs}
 [ $? -ne 0 ] && fatal "failed to install turnkey ${app_name}"
