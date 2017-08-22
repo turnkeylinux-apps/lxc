@@ -21,7 +21,7 @@ the template. For example, to show the templates usage we could run::
     Options::
 
         -a --arch=       Appliance architecture (default: hosts architecture)
-        -v --version=    Appliance version (default: 14.0-jessie)
+        -v --version=    Appliance version (default: 14.2-jessie)
         -x --aptproxy=   Address of APT Proxy (e.g., http://192.168.121.1:3142)
 
         -i --inithooks=  Path to inithooks.conf (e.g., /root/inithooks.conf)
@@ -37,7 +37,7 @@ the template. For example, to show the templates usage we could run::
 
     Example usage::
 
-        lxc-create -n core -f /etc/lxc/bridge.conf -t turnkey -- core -i /root/inithooks.conf
+        lxc-create -n core -f /etc/lxc/bridge.conf -t turnkey -- core -i /root/inithooks.conf -v 14.1-jessie
 
 Inithooks (preseeding)
 ----------------------
@@ -63,12 +63,11 @@ Networking (bridged vs. NAT)
 ----------------------------
 
 TurnKey LXC supports two networking configurations out of the box,
-bridged and NAT. Starting in v14.0, the TurnKey LXC template follows the
-convention established by other templates and lets lxc-create control
-the network configuration through the '-f <config_file>' option.
-For convenience, two preconfigured files are provided, /etc/lxc/bridge.conf,
-and /etc/lxc/natbridge.conf. The NAT bridge configuration is now the default,
-when no config file is specified.
+bridged and NAT. The TurnKey LXC template follows the convention established by
+other templates and lets lxc-create control the network configuration through
+the '-f <config_file>' option. For convenience, two preconfigured files are
+provided; `/etc/lxc/bridge.conf` and `/etc/lxc/natbridge.conf`. The NAT bridge
+configuration is now the default, when no config file is specified.
 
 Bridged (br0)
 '''''''''''''
@@ -100,12 +99,12 @@ traffic to the container based on a set of rules.
 Usage: nginx-proxy
 ''''''''''''''''''
 
-The 2.3 version of nginx-proxy has been updated to support the v14.0
-appliances and was decoupled from lxc so it can proxy any upstream vm or
-container. Some new options have been added to make it easier to cleanup
-when containers are removed and to better support the Ansible appliance.
-Templates now use the Jinja2 style, although Jinja2 is not yet used to
-render the output files. This feature may be added in future versions. ::
+The current version of nginx-proxy supports the v14.x appliances and is
+decoupled from lxc so it can proxy any upstream vm or container. Options have
+exist which make it easier to cleanup when containers are removed and to better
+support the Ansible appliance. Templates now use the Jinja2 style, although
+Jinja2 is not yet used to render the output files. This feature may be added in
+future versions. ::
 
     nginx-proxy version 2.3: GNU General Public License version 3
     Create site configuration to proxy requests destined for domain to host
@@ -167,9 +166,10 @@ Wordpress container using the bridged network configuration.
 
 1. Create the container::
 
-    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress -i /root/inithooks.conf
+    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress -i /root/inithooks.conf -v 14.2-jessie
     
     This could have been shortened because -i|--inithooks now defaults to /root/inithooks.conf
+    Also version defaults to `14.2-jessie`.:
     # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress
     
 2. Start the container in the background::
@@ -188,9 +188,9 @@ TurnKey LXC appliance) so other containers can leverage the cache.
 
 1. Create the container::
 
-    # lxc-create -n wp2 -f /etc/lxc/natbridge.conf -t turnkey -- wordpress -i /root/inithooks.conf -x http://192.168.121.1:3142
+    # lxc-create -n wp2 -f /etc/lxc/natbridge.conf -t turnkey -- wordpress -x http://192.168.121.1:3142
     
-    This could have been shortened because natbridge.conf is the default config and inithooks defaults to /root/inithooks.conf
+    This could have been shortened because natbridge.conf is the default config:
     # lxc-create -n wp2 -t turnkey -- wordpress -x http://192.168.121.1:3142
 
 
