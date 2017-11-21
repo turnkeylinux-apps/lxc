@@ -535,7 +535,7 @@ eval set -- "$OPTIONS"
 app_name="core"
 arch=$(dpkg --print-architecture)
 hostarch=${arch}
-version=$(cat /etc/turnkey_version | perl -pe 's/.*-([^-]+(-[^-]+){2})$/\1/')
+version=$(cat /etc/turnkey_version | cut -d'-' -f3,4)
 inithooks="/root/inithooks.conf"
 
 while true; do
