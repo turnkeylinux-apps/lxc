@@ -361,7 +361,7 @@ TIMEOUTclose = 0
     DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy update
     DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy install --force-yes --no-install-recommends dpkg debian-archive-keyring
     # Remove old, unneeded packages
-    DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy autoremove
+    DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy autoremove --purge
 }
 
 install_turnkey() {
