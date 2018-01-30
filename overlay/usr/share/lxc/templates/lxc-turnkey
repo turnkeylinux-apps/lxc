@@ -91,6 +91,9 @@ EOF
     mkdir -p ${rootfs}/selinux
     echo 0 > ${rootfs}/selinux/enforce
 
+    # always make sure resolv.conf is up to date in the target
+    cp /etc/resolv.conf ${rootfs}/etc/resolv.conf
+
     # configure the network using the dhcp
     cat <<EOF > ${rootfs}/etc/network/interfaces
 auto lo
