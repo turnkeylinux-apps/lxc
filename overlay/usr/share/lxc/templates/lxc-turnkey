@@ -320,6 +320,10 @@ configure_turnkey() {
     # ensure inithooks.conf is executable by root
     chmod 0700 ${rootfs}/etc/inithooks.conf
 
+    # remove the ntp servers; containers get time from host
+    info "disabling ntp servers..."
+    sudo sed -i '/^NTPSERVERS=/ s/".*"/""/' ${rootfs}/etc/default/ntpdate
+    
     info "patch container for sysvinit"
     sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init/cgmanager.conf
     sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init.d/cgmanager
