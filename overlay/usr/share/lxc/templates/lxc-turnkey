@@ -364,6 +364,59 @@ TIMEOUTclose = 0
         echo ${aptconf} > ${rootfs}/etc/apt/apt.conf.d/01proxy
     fi
 
+    ## Security Hardening
+    # apply changes recommended by lynis and openVAS
+    # these changes can be removed after they have been applied upstream
+
+    info "security hardening..."
+
+    # Kernel Hardening
+    # LXC containers use the host kernel, therefore changes
+    # to /etc/sysctl.conf in the container are ignored
+    # Kernel hardening must be applied to the host's /etc/sysctl.conf
+
+    # ssh hardening
+    info "hardening ssh..."
+    SSH_DIR="${rootfs}/root/.ssh"
+    if [ -d ${SSH_DIR} ]; then
+      chmod -R g-rwx,o-rwx ${SSH_DIR}
+    fi
+
+    CONF="${rootfs}/etc/ssh/sshd_config"
+    if [ -e ${CONF} ]; then
+      sed -i '{
+        /^UsePrivilegeSeparation/ s/yes/sandbox/
+        /^X11Forwarding/ s/yes/no/
+        /^TCPKeepAlive/ s/yes/no/
+        /^UsePrivilegeSeparation/ a\
+\
+# SSH hardening recommended by lynis\
+AllowTcpForwarding no\
+ClientAliveCountMax 2\
+MaxAuthTries 2\
+MaxSessions 2
+      }'  ${CONF}
+    fi
+
+    # postfix banner
+    CONF="${rootfs}/etc/postfix/main.cf"
+    if [ -e ${CONF} ]; then
+      info "hardening postfix banner"
+      sed -i '/^smtpd_banner/ s/=.*$/= \$myhostname ESMTP/' ${CONF}
+    fi
+
+    # umask defaults
+    info "hardening umask defaults"
+    CONF="${rootfs}/etc/login.defs"
+    if [ -e ${CONF} ]; then
+      sed -i '/^UMASK/ s/[[:digit:]]\+/027/' ${CONF}
+    fi
+
+    CONF="${rootfs}/etc/init.d/rc"
+    if [ -e ${CONF} ]; then
+      sed -i '/^umask/ s/[[:digit:]]\+/027/' ${CONF}
+    fi
+
     # Some older images need newer versions of dpkg to support multiarch
     DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy update
     DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy install --force-yes --no-install-recommends dpkg debian-archive-keyring
