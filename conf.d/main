@@ -45,3 +45,8 @@ update-rc.d stunnel4 disable
 # copy sysv init script to systemd autostart helper
 cp /etc/init.d/lxc /usr/lib/x86_64-linux-gnu/lxc/lxc-autostart-helper
 
+# get current grub cmdline default
+GRUB_CMDLINE_LINUX_DEFAULT=$(sed -rn 's/GRUB_CMDLINE_LINUX_DEFAULT="(.*)"/\1/p' /etc/default/grub)
+GRUB_CMDLINE_LINUX_DEFAULT+=" cgroup_enable=memory swapaccount=1"
+# set grub cmdline default with our extra options
+sed -i "/GRUB_CMDLINE_LINUX_DEFAULT=/ s/=\".*\"/=\"$GRUB_CMDLINE_LINUX_DEFAULT\"/" /etc/default/grub
