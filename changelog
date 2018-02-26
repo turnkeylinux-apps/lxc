@@ -1,3 +1,12 @@
+turnkey-lxc-15.0 (1) turnkey; urgency=low
+
+  * Update lxc to newest debian/stretch (2.0.7)
+
+  * Note: Please refer to turnkey-core's changelog for changes common to all
+    appliances. Here we only describe changes specific to this appliance.
+
+ -- Stefan Davis <stefan@turnkeylinux.org>  Sun, 18 Feb 2018 22:29:50 +1100
+
 turnkey-lxc-14.2 (1) turnkey; urgency=low
 
   * Updates for TurnKey GNU/Linux 14.2

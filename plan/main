@@ -6,6 +6,7 @@ dnsmasq-utils
 bridge-utils
 nginx
 apt-cacher-ng
+python-requests
 
 /* required by lxc download template */
 xz-utils
@@ -23,3 +24,4 @@ aptitude
 python-apt
 python-httplib2
 bzip2
+

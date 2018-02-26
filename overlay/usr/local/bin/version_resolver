@@ -1,0 +1,135 @@
+#!/usr/bin/env python
+from __future__ import print_function
+from os.path import isdir, isfile, join, getmtime
+from os import mkdir
+from sys import stderr, exit
+import time
+import argparse
+import requests
+
+UPSTREAM='http://mirror.turnkeylinux.org/turnkeylinux/metadata/pve/aplinfo.dat'
+DATE_FORMAT='%a, %d %b %Y %H:%M:%S %Z'
+
+CACHE_PATH='/var/cache/tkl-lxc-index'
+if not isdir(CACHE_PATH):
+    mkdir(CACHE_PATH)
+
+INDEX_TIMESTAMP_PATH = join(CACHE_PATH, 'timestamp')
+INDEX_PATH = join(CACHE_PATH, 'aplinfo.dat')
+
+if isfile(INDEX_TIMESTAMP_PATH):
+    with open(INDEX_TIMESTAMP_PATH, 'r') as fob:
+        TIMESTAMP = fob.read()
+else:
+    TIMESTMAP = ''
+
+SECONDS_PER_DAY = 60*60*24
+
+debian_codenames = {
+    '8' :   'jessie',
+    '9' :   'stretch',
+    '10' :  'buster'
+}
+
+def get_header(key, headers):
+    key = key.lower()
+    for header, value in headers.items():
+        if header.lower() == key:
+            return value
+    raise KeyError(key)
+
+def need_to_update():
+    # if updated within the last 24 hours, don't bother
+    last_modified = getmtime(INDEX_TIMESTAMP_PATH)
+    if last_modified+SECONDS_PER_DAY > time.time():
+        return False
+
+    response = requests.head(UPSTREAM)
+    response.raise_for_status()
+
+    try:
+        return get_header('date', response.headers) != TIMESTAMP
+    except KeyError:
+        return True
+
+def download_upstream_index():
+    response = requests.get(UPSTREAM)
+    response.raise_for_status()
+
+    with open(INDEX_PATH, 'w') as fob:
+        fob.write(response.text)
+    
+    try:
+        timestamp = get_header('date', response.headers)
+    except KeyError:
+        timestamp = ''
+    
+    with open(INDEX_TIMESTAMP_PATH, 'w') as fob:
+        fob.write(timestamp)
+
+
+def read_file(fob):
+    attributes = [{}]
+    last_key = ''
+    for line in fob:
+        line = line.rstrip()
+        if not line:
+            attributes.append({})
+        elif line[0] == ' ':
+            attributes[-1][last_key] += '\n' + line
+        else:
+            key, value = line.split(': ')
+            if key == 'Version':
+                major, rest = value.split('.')
+                minor, patch = rest.split('-')
+                value = (int(major), int(minor))
+            elif key == 'OS':
+                deb_version = value.split('-')[-1]
+                if deb_version in debian_codenames:
+                    value = debian_codenames[deb_version]
+                else:
+                    print('Unrecognised debian version {}'.format(deb_version),
+                        file=stderr)
+                    exit(1)
+            attributes[-1][key] = value
+            last_key = key
+    return attributes[:-1]
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest='command')
+    version = subparsers.add_parser('version', description='Get newest valid version of appliance')
+    version.add_argument('appliance')
+
+    update = subparsers.add_parser('update', description='Updates index if necessary')
+    update.add_argument('-f', '--force', action='store_true', help='Force update')
+
+    args = parser.parse_args()
+
+    if args.command == 'version':
+        appliance = args.appliance.lower()
+
+        if not isfile(INDEX_PATH):
+            print('Index not found: Updating', file=stderr)
+            try:
+                download_upstream_index()
+            except requests.exceptions.RequestException:
+                print('Failed to update index!', file=stderr)
+                exit(1)
+
+        with open(INDEX_PATH, 'r') as fob:
+            data = read_file(fob)
+
+        for record in data:
+            if (appliance == record['Package'] or
+                    appliance == record['Package'].split('-', 1)[1]):
+                print('{0}.{1}-{2}'.format(
+                    record['Version'][0], record['Version'][1], record['OS']))
+                exit(0)
+    elif args.command == 'update':
+        if args.force or need_to_update():
+            try:
+                download_upstream_index()
+            except requests.exceptions.RequestException:
+                print('Failed to update index!', file=stderr)
+                exit(1)
