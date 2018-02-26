@@ -286,7 +286,7 @@ download_image() {
     [ ! -f "${TMP}/${signature}" ] && fatal "signature ${TMP}/${signature} not found"
 
     info "downloading appliance image..."
-    wget --read-timeout=10 -t 3 -nv -c ${baseurl}/${image} -O ${TMP}/${image}
+    wget --read-timeout=10 -t 3 -c ${baseurl}/${image} -O ${TMP}/${image}
     if [ $? -eq 0 ]; then
         verify_signature ${TMP} ${image} ${signature}
         mv ${TMP}/${image} ${cache}/${image}
