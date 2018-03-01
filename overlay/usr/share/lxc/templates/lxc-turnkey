@@ -408,18 +408,6 @@ MaxSessions 2
       sed -i '/^smtpd_banner/ s/=.*$/= \$myhostname ESMTP/' ${CONF}
     fi
 
-    # umask defaults
-    info "hardening umask defaults"
-    CONF="${rootfs}/etc/login.defs"
-    if [ -e ${CONF} ]; then
-      sed -i '/^UMASK/ s/[[:digit:]]\+/027/' ${CONF}
-    fi
-
-    CONF="${rootfs}/etc/init.d/rc"
-    if [ -e ${CONF} ]; then
-      sed -i '/^umask/ s/[[:digit:]]\+/027/' ${CONF}
-    fi
-
     # Some older images need newer versions of dpkg to support multiarch
     DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy update
     DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy install --force-yes --no-install-recommends dpkg debian-archive-keyring
