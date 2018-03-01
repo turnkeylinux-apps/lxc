@@ -288,7 +288,7 @@ download_image() {
     [ ! -f "${TMP}/${signature}" ] && fatal "signature ${TMP}/${signature} not found"
 
     info "downloading appliance image..."
-    wget --read-timeout=10 -t 3 -nv -c ${baseurl}/${image} -O ${TMP}/${image}
+    wget --read-timeout=10 -t 3 -c ${baseurl}/${image} -O ${TMP}/${image}
     if [ $? -eq 0 ]; then
         verify_signature ${TMP} ${image} ${signature}
         mv ${TMP}/${image} ${cache}/${image}
@@ -588,8 +588,8 @@ eval set -- "$OPTIONS"
 app_name="core"
 arch=$(dpkg --print-architecture)
 hostarch=${arch}
+# set default version for usage display
 def_ver=$(cat /etc/turnkey_version | cut -d'-' -f3,4)
-version=${def_ver}
 inithooks="/root/inithooks.conf"
 
 while true; do
@@ -613,10 +613,11 @@ done
 
 [ -z "${app_name}" ]    && fatal "appname not specified"
 [ -z "${arch}" ]        && fatal "architecture not specified"
-[ -z "${version}" ]     && fatal "version not specified"
+[ -z "${version}" ]     && version=$(version_resolver version $app_name) || fatal "version not specified"
 [ -z "${path}" ]        && fatal "path parameter is required"
 [ -z "${name}" ]        && fatal "name parameter is required"
 [ -e "${inithooks}" ]   || fatal "inithooks not specified or does not exist"
+
 
 case "${arch}" in
      i386)             ;;
