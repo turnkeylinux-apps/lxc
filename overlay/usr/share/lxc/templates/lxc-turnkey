@@ -430,7 +430,7 @@ MaxSessions 2
 
     # Remove old, unneeded packages
     DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy autoremove --purge
-    DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy autoclean
+    DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy clean
 }
 
 install_turnkey() {
