@@ -4,6 +4,9 @@
 # exit if already added
 grep -qs /sys/fs/cgroup /etc/fstab && exit 2
 
+# exit if already mounted
+mount | grep -qs /sys/fs/cgroup && exit 2
+
 echo "none /sys/fs/cgroup cgroup defaults 0 0" >> /etc/fstab
 mount /sys/fs/cgroup
 
