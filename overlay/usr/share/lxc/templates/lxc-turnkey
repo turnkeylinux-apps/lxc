@@ -375,31 +375,34 @@ TIMEOUTclose = 0
     info "security hardening..."
 
     # Kernel Hardening
-    # LXC containers use the host kernel, therefore changes
-    # to /etc/sysctl.conf in the container are ignored
-    # Kernel hardening must be applied to the host's /etc/sysctl.conf
-
-    # ssh hardening
-    info "hardening ssh..."
-    SSH_DIR="${rootfs}/root/.ssh"
-    if [ -d ${SSH_DIR} ]; then
-      chmod -R g-rwx,o-rwx ${SSH_DIR}
+    if [ -d ${rootfs}/etc/sysctl.d -a ! -f ${rootfs}/etc/sysctl.d/90-hardening.conf ]; then
+      info "hardening system variables..."
+      cp /etc/sysctl.d/90-hardening.conf ${rootfs}/etc/sysctl.d/90-hardening.conf
     fi
 
+    # ssh hardening
+    SSH_DIR="${rootfs}/root/.ssh"
     CONF="${rootfs}/etc/ssh/sshd_config"
-    if [ -e ${CONF} ]; then
-      sed -i '{
-        /^UsePrivilegeSeparation/ s/yes/sandbox/
-        /^X11Forwarding/ s/yes/no/
-        /^TCPKeepAlive/ s/yes/no/
-        /^UsePrivilegeSeparation/ a\
+    if ! grep -q 'SSH hardening' ${CONF} 2> /dev/null ; then
+      info "hardening ssh..."
+      if [ -d ${SSH_DIR} ]; then
+        chmod -R g-rwx,o-rwx ${SSH_DIR}
+      fi
+
+      if [ -e ${CONF} ]; then
+        sed -i '{
+          /^UsePrivilegeSeparation/ s/yes/sandbox/
+          /^X11Forwarding/ s/yes/no/
+          /^TCPKeepAlive/ s/yes/no/
+          /^UsePrivilegeSeparation/ a\
 \
 # SSH hardening recommended by lynis\
 AllowTcpForwarding no\
 ClientAliveCountMax 2\
 MaxAuthTries 2\
 MaxSessions 2
-      }'  ${CONF}
+        }'  ${CONF}
+      fi
     fi
 
     # postfix banner
