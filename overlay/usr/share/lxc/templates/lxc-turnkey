@@ -332,9 +332,9 @@ configure_turnkey() {
     sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init/cgmanager.conf
     sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init.d/cgmanager
 
-    info "patch container for stunnel"
     if ! sed -n '/^\[shellinabox\]/,/^\[/ p' ${stunnel_conf} | grep -q "TIMEOUTclose"
     then
+      info "patching container for stunnel..."
       info "updating section [shellinabox]..."
       sed -ie '/^\[shellinabox\]/,/^\[/ {
         :a
