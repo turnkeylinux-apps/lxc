@@ -423,6 +423,10 @@ MaxSessions 2
     # Remove old, unneeded packages
     DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy autoremove --purge
     DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy clean
+
+    # Make sure /boot and /lib/modules are present
+    [ -d ${rootfs}/boot ] || mkdir -p ${rootfs}/boot
+    [ -d ${rootfs}/lib/modules ] || mkdir -p ${rootfs}/lib/modules
 }
 
 install_turnkey() {
