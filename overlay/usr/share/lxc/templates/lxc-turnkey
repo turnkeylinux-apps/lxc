@@ -391,12 +391,19 @@ TIMEOUTclose = 0
 
       if [ -e ${CONF} ]; then
         sed -i '{
-          /^UsePrivilegeSeparation/ s/yes/sandbox/
-          /^X11Forwarding/ s/yes/no/
-          /^TCPKeepAlive/ s/yes/no/
-          /^UsePrivilegeSeparation/ a\
+          /^UsePrivilegeSeparation/ d
+          /^X11Forwarding/ d
+          /^TCPKeepAlive/ d
+          /^AllowTcpForwarding/ d
+          /^ClientAliveCountMax/ d
+          /^MaxAuthTries/ d
+          /^MaxSessions/ d
+          /^UseDNS/ a\
 \
 # SSH hardening recommended by lynis\
+UsePrivilegeSeparation sandbox\
+X11Forwarding no\
+TCPKeepAlive no\
 AllowTcpForwarding no\
 ClientAliveCountMax 2\
 MaxAuthTries 2\
