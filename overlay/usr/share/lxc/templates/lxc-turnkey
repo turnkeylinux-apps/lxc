@@ -377,11 +377,20 @@ TIMEOUTclose = 0
 
     # ssh hardening
     SSH_DIR="${rootfs}/root/.ssh"
+    SKEL_DIR="${rootfs}/etc/skel/.ssh"
     CONF="${rootfs}/etc/ssh/sshd_config"
     if ! grep -q 'SSH hardening' ${CONF} 2> /dev/null ; then
       info "hardening ssh..."
+      if [ -d ${SKEL_DIR} ]; then
+        chmod -R g-rwx,o-rwx ${SKEL_DIR}
+      else
+        mkdir -m 0700 ${SKEL_DIR}
+      fi
+
       if [ -d ${SSH_DIR} ]; then
         chmod -R g-rwx,o-rwx ${SSH_DIR}
+      else
+        mkdir -m 0700 ${SSH_DIR}
       fi
 
       if [ -e ${CONF} ]; then
