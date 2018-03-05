@@ -98,17 +98,12 @@ EOF
     # always make sure resolv.conf is up to date in the target
     cp /etc/resolv.conf ${rootfs}/etc/resolv.conf
 
-    # configure the network using the dhcp
-    cat <<EOF > ${rootfs}/etc/network/interfaces
-auto lo
-iface lo inet loopback
+    # set the hostname
+    cat <<EOF >> ${rootfs}/etc/network/interfaces
 
-auto eth0
-iface eth0 inet dhcp
 hostname ${name}
 EOF
 
-    # set the hostname
     cat <<EOF > ${rootfs}/etc/hostname
 ${name}
 EOF
