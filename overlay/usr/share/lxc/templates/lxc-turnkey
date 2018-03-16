@@ -99,10 +99,7 @@ EOF
     cp /etc/resolv.conf ${rootfs}/etc/resolv.conf
 
     # set the hostname
-    cat <<EOF >> ${rootfs}/etc/network/interfaces
-
-hostname ${name}
-EOF
+    sed -i "/^iface.*dhcp$/,/^$/!b;/^$/i\hostname ${name}" ${rootfs}/etc/network/interfaces
 
     cat <<EOF > ${rootfs}/etc/hostname
 ${name}
