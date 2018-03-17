@@ -461,7 +461,9 @@ copy_configuration() {
     local path=$1
     local rootfs=$2
     local name=$3
-    local arch=$4
+    local arch=${4:="x86_64"}
+
+    [[ ${arch} == "amd64" ]] && arch="x86_64"
 
     # Generate the configuration file
     ## Create the fstab (empty by default)
