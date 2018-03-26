@@ -367,9 +367,9 @@ TIMEOUTclose = 0
     info "security hardening..."
 
     # Kernel Hardening
-    if [ -d ${rootfs}/etc/sysctl.d -a ! -f ${rootfs}/etc/sysctl.d/90-hardening.conf ]; then
+    if [ -d ${rootfs}/etc/sysctl.d -a ! -f ${rootfs}/etc/sysctl.d/10-hardening.conf ]; then
       info "hardening system variables..."
-      cp /etc/sysctl.d/90-hardening.conf ${rootfs}/etc/sysctl.d/90-hardening.conf
+      cp /etc/sysctl.d/10-hardening.conf ${rootfs}/etc/sysctl.d/10-hardening.conf
     fi
 
     # ssh hardening
