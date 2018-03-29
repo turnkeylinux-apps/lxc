@@ -627,9 +627,11 @@ done
 
 [ "$(id -u)" != "0" ] && fatal "must be run as root"
 
+version=${version:=$(version_resolver version ${app_name})}
+
 [ -z "${app_name}" ]    && fatal "appname not specified"
 [ -z "${arch}" ]        && fatal "architecture not specified"
-[ -z "${version}" ]     && version=$(version_resolver version $app_name) || fatal "version not specified"
+[ -z "${version}" ]     && fatal "version not specified"
 [ -z "${path}" ]        && fatal "path parameter is required"
 [ -z "${name}" ]        && fatal "name parameter is required"
 [ -e "${inithooks}" ]   || fatal "inithooks not specified or does not exist"
