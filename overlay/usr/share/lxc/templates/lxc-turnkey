@@ -61,14 +61,6 @@ configure_debian() {
     local rootfs=$1
     local name=$2
 
-    # squeeze only has /dev/tty and /dev/tty0 by default,
-    # therefore creating missing device nodes for tty1-4.
-    for tty in $(seq 1 4); do
-        if [ ! -e ${rootfs}/dev/tty$tty ]; then
-            mknod ${rootfs}/dev/tty$tty c 4 $tty
-        fi
-    done
-
     # configure the inittab
     cat <<EOF > ${rootfs}/etc/inittab
 id:2:initdefault:
