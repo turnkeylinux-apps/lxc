@@ -8,5 +8,6 @@ export APP_PASS=$MASTERPASS
 export APP_EMAIL=admin@example.com
 export APP_DOMAIN=DEFAULT
 export HUB_APIKEY=SKIP
+export SEC_ALERTS=SKIP
 export SEC_UPDATES=FORCE
 
