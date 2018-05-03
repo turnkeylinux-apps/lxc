@@ -416,7 +416,7 @@ MaxSessions 2
 
     # Some older images need newer versions of dpkg to support multiarch
     DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy update
-    DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy install --force-yes --no-install-recommends dpkg debian-archive-keyring
+    DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy install --no-install-recommends dpkg debian-archive-keyring
 
     # Purge any config files from removed packages
     REMOVED=$( chroot ${rootfs} dpkg -l | awk '/^rc/ {print $2}' )
