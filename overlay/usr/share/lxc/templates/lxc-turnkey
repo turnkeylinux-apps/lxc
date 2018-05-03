@@ -61,7 +61,8 @@ configure_debian() {
     local rootfs=$1
     local name=$2
 
-    # configure the inittab
+    if [ "${deb_release}" == "wheezy" -o "${deb_release}" == "jessie" ]; then
+    # configure the inittab only for wheezy or jessie
     cat <<EOF > ${rootfs}/etc/inittab
 id:2:initdefault:
 si::sysinit:/etc/init.d/rcS
@@ -78,6 +79,7 @@ z6:6:respawn:/sbin/sulogin
 p6::ctrlaltdel:/sbin/init 6
 p0::powerfail:/sbin/init 0
 EOF
+    fi
 
     # symlink mtab
     [ -e "${rootfs}/etc/mtab" ] && rm ${rootfs}/etc/mtab
