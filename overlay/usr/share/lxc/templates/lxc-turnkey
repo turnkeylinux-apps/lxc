@@ -312,7 +312,7 @@ configure_turnkey() {
 
     # remove the ntp servers; containers get time from host
     info "disabling ntp servers..."
-    sudo sed -i '/^NTPSERVERS=/ s/".*"/""/' ${rootfs}/etc/default/ntpdate
+    sed -i '/^NTPSERVERS=/ s/".*"/""/' ${rootfs}/etc/default/ntpdate
     
     info "patch container for sysvinit"
     sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init/cgmanager.conf
