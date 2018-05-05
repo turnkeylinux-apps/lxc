@@ -1,11 +1,27 @@
-turnkey-lxc-15.0 (1) turnkey; urgency=low
+turnkey-lxc-15.0-rc1 (1) turnkey; urgency=low
 
   * Update lxc to newest debian/stretch (2.0.7)
+
+  * Added several enhancements
+    - version resolver downloads latest version by default
+        Stefan Davis <stefan@turnkeylinux.org>
+    - cleans unused packages from apt cache
+    - purges config files from removed packages
+    - removes ntp server config; containers get time from host
+    - adds system hardening for legacy appliances
+    - indicate patching stunnel only when actually patching
+    - keep legacy /etc/network/interfaces
+    - add hostname to dhcp interfaces so dnsmasq works properly
+    - make it easier to override system hardening
+    - allow cli to override version_resolver
+    - configure /etc/inittab only for legacy apps
+    - updated inithooks.conf examples and docs
+    - removed support for squeeze (now obsolete)
 
   * Note: Please refer to turnkey-core's changelog for changes common to all
     appliances. Here we only describe changes specific to this appliance.
 
- -- Stefan Davis <stefan@turnkeylinux.org>  Sun, 18 Feb 2018 22:29:50 +1100
+ -- John Carver <dude4linux@gmail.com>  Thu, 03 May 2018 19:45:31 +0000
 
 turnkey-lxc-14.2 (1) turnkey; urgency=low
 

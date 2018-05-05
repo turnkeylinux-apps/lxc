@@ -13,6 +13,10 @@
 # Updated for TurnKey GNU/Linux version 14.2:
 # John Carver <dude4linux@gmail.com>
 
+# Updated for TurnKey GNU/Linux version 15.0:
+# John Carver <dude4linux@gmail.com>
+# Stefan Davis added version_resolver
+
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
 # License as published by the Free Software Foundation; either
@@ -57,15 +61,8 @@ configure_debian() {
     local rootfs=$1
     local name=$2
 
-    # squeeze only has /dev/tty and /dev/tty0 by default,
-    # therefore creating missing device nodes for tty1-4.
-    for tty in $(seq 1 4); do
-        if [ ! -e ${rootfs}/dev/tty$tty ]; then
-            mknod ${rootfs}/dev/tty$tty c 4 $tty
-        fi
-    done
-
-    # configure the inittab
+    if [ "${deb_release}" == "wheezy" -o "${deb_release}" == "jessie" ]; then
+    # configure the inittab only for wheezy or jessie
     cat <<EOF > ${rootfs}/etc/inittab
 id:2:initdefault:
 si::sysinit:/etc/init.d/rcS
@@ -79,13 +76,10 @@ l6:6:wait:/etc/init.d/rc 6
 # Normally not reached, but fallthrough in case of emergency.
 z6:6:respawn:/sbin/sulogin
 1:2345:respawn:/sbin/getty 38400 console linux
-c1:12345:respawn:/sbin/getty 38400 tty1 linux
-c2:12345:respawn:/sbin/getty 38400 tty2 linux
-c3:12345:respawn:/sbin/getty 38400 tty3 linux
-c4:12345:respawn:/sbin/getty 38400 tty4 linux
 p6::ctrlaltdel:/sbin/init 6
 p0::powerfail:/sbin/init 0
 EOF
+    fi
 
     # symlink mtab
     [ -e "${rootfs}/etc/mtab" ] && rm ${rootfs}/etc/mtab
@@ -95,17 +89,12 @@ EOF
     mkdir -p ${rootfs}/selinux
     echo 0 > ${rootfs}/selinux/enforce
 
-    # configure the network using the dhcp
-    cat <<EOF > ${rootfs}/etc/network/interfaces
-auto lo
-iface lo inet loopback
-
-auto eth0
-iface eth0 inet dhcp
-hostname ${name}
-EOF
+    # always make sure resolv.conf is up to date in the target
+    cp /etc/resolv.conf ${rootfs}/etc/resolv.conf
 
     # set the hostname
+    sed -i "/^iface.*dhcp$/,/^$/!b;/^$/i\hostname ${name}" ${rootfs}/etc/network/interfaces
+
     cat <<EOF > ${rootfs}/etc/hostname
 ${name}
 EOF
@@ -321,13 +310,17 @@ configure_turnkey() {
     # ensure inithooks.conf is executable by root
     chmod 0700 ${rootfs}/etc/inithooks.conf
 
+    # remove the ntp servers; containers get time from host
+    info "disabling ntp servers..."
+    sed -i '/^NTPSERVERS=/ s/".*"/""/' ${rootfs}/etc/default/ntpdate
+    
     info "patch container for sysvinit"
     sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init/cgmanager.conf
     sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init.d/cgmanager
 
-    info "patch container for stunnel"
     if ! sed -n '/^\[shellinabox\]/,/^\[/ p' ${stunnel_conf} | grep -q "TIMEOUTclose"
     then
+      info "patching container for stunnel..."
       info "updating section [shellinabox]..."
       sed -ie '/^\[shellinabox\]/,/^\[/ {
         :a
@@ -361,11 +354,81 @@ TIMEOUTclose = 0
         echo ${aptconf} > ${rootfs}/etc/apt/apt.conf.d/01proxy
     fi
 
+    ## Security Hardening
+    # apply changes recommended by lynis and openVAS
+    # these changes can be removed after they have been applied upstream
+
+    info "security hardening..."
+
+    # Kernel Hardening
+    if [ -d ${rootfs}/etc/sysctl.d -a ! -f ${rootfs}/etc/sysctl.d/10-hardening.conf ]; then
+      info "hardening system variables..."
+      cp /etc/sysctl.d/10-hardening.conf ${rootfs}/etc/sysctl.d/10-hardening.conf
+    fi
+
+    # ssh hardening
+    SSH_DIR="${rootfs}/root/.ssh"
+    SKEL_DIR="${rootfs}/etc/skel/.ssh"
+    CONF="${rootfs}/etc/ssh/sshd_config"
+    if ! grep -q 'SSH hardening' ${CONF} 2> /dev/null ; then
+      info "hardening ssh..."
+      if [ -d ${SKEL_DIR} ]; then
+        chmod -R g-rwx,o-rwx ${SKEL_DIR}
+      else
+        mkdir -m 0700 ${SKEL_DIR}
+      fi
+
+      if [ -d ${SSH_DIR} ]; then
+        chmod -R g-rwx,o-rwx ${SSH_DIR}
+      else
+        mkdir -m 0700 ${SSH_DIR}
+      fi
+
+      if [ -e ${CONF} ]; then
+        sed -i '{
+          /^UsePrivilegeSeparation/ d
+          /^X11Forwarding/ d
+          /^TCPKeepAlive/ d
+          /^AllowTcpForwarding/ d
+          /^ClientAliveCountMax/ d
+          /^MaxAuthTries/ d
+          /^MaxSessions/ d
+          /^UseDNS/ a\
+\
+# SSH hardening recommended by lynis\
+UsePrivilegeSeparation sandbox\
+X11Forwarding no\
+TCPKeepAlive no\
+AllowTcpForwarding no\
+ClientAliveCountMax 2\
+MaxAuthTries 2\
+MaxSessions 2
+        }'  ${CONF}
+      fi
+    fi
+
+    # postfix banner
+    CONF="${rootfs}/etc/postfix/main.cf"
+    if [ -e ${CONF} ]; then
+      info "hardening postfix banner"
+      sed -i '/^smtpd_banner/ s/=.*$/= \$myhostname ESMTP/' ${CONF}
+    fi
+
     # Some older images need newer versions of dpkg to support multiarch
     DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy update
-    DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy install --force-yes --no-install-recommends dpkg debian-archive-keyring
+    DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy install --no-install-recommends dpkg debian-archive-keyring
+
+    # Purge any config files from removed packages
+    REMOVED=$( chroot ${rootfs} dpkg -l | awk '/^rc/ {print $2}' )
+    DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy purge ${REMOVED}
+
     # Remove old, unneeded packages
-    DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy autoremove
+    DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy autoremove --purge
+    DEBIAN_FRONTEND=noninteractive chroot ${rootfs} apt-get -qy clean
+
+    # Make sure /boot and /lib/modules are present
+    [ -d ${rootfs}/boot ] || mkdir -p ${rootfs}/boot
+    [ -d ${rootfs}/lib/modules ] || mkdir -p ${rootfs}/lib/modules
 }
 
 install_turnkey() {
@@ -392,7 +455,9 @@ copy_configuration() {
     local path=$1
     local rootfs=$2
     local name=$3
-    local arch=$4
+    local arch=${4:="x86_64"}
+
+    [[ ${arch} == "amd64" ]] && arch="x86_64"
 
     # Generate the configuration file
     ## Create the fstab (empty by default)
@@ -503,7 +568,7 @@ Arguments::
 Options::
 
     -a --arch=       Appliance architecture (default: hosts architecture)
-    -v --version=    Appliance version (default: 14.2-jessie)
+    -v --version=    Appliance version (default: latest available)
     -x --aptproxy=   Address of APT Proxy (e.g., http://192.168.121.1:3142)
 
     -i --inithooks=  Path to inithooks.conf (default: /root/inithooks.conf)
@@ -535,7 +600,6 @@ eval set -- "$OPTIONS"
 app_name="core"
 arch=$(dpkg --print-architecture)
 hostarch=${arch}
-#version=$(cat /etc/turnkey_version | cut -d'-' -f3,4)
 inithooks="/root/inithooks.conf"
 
 while true; do
@@ -557,9 +621,11 @@ done
 
 [ "$(id -u)" != "0" ] && fatal "must be run as root"
 
+version=${version:=$(version_resolver version ${app_name})}
+
 [ -z "${app_name}" ]    && fatal "appname not specified"
 [ -z "${arch}" ]        && fatal "architecture not specified"
-[ -z "${version}" ]     && version=$(version_resolver version $app_name) || fatal "version not specified"
+[ -z "${version}" ]     && fatal "version not specified"
 [ -z "${path}" ]        && fatal "path parameter is required"
 [ -z "${name}" ]        && fatal "name parameter is required"
 [ -e "${inithooks}" ]   || fatal "inithooks not specified or does not exist"

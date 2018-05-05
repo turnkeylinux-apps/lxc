@@ -53,6 +53,7 @@ configuration for the TurnKey Wordpress appliance::
     export APP_EMAIL=admin@example.com
     export APP_DOMAIN=www.example.com
     export HUB_APIKEY=SKIP
+    export SEC_ALERTS=SKIP
     export SEC_UPDATES=FORCE
     EOF
 
