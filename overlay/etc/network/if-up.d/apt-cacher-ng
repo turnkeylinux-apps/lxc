@@ -1,0 +1,29 @@
+#!/bin/bash -e
+# configure apt-cacher-ng when interface br0 comes up
+
+CONF="/etc/apt-cacher-ng/acng.conf"
+
+if [ "$IFACE" = "br0" ]; then
+  BR0_IP=$(ip route | sed -rn '/ br0/{ s/.*src (\S+).*/\1/p }')
+  BINDADDRESS="BindAddress: ${BR0_IP}"
+  APT_PROXY="http://${BR0_IP}:3142"
+
+  # check if BindAddress has changed
+  if ! grep -qc "${BINDADDRESS}" ${CONF}; then
+    # update apt-cacher-ng config
+    sed -i "/^BindAddress: /c ${BINDADDRESS}" ${CONF}
+
+    # update lxc.environment
+    sed -i "/^lxc.environment/c lxc.environment = APT_PROXY=${APT_PROXY}" /etc/lxc/common.conf
+
+    # if apt-cacher-ng is running
+    if service apt-cacher-ng status > /dev/null 2>&1; then
+      # restart it to take hold of new config
+      service apt-cacher-ng restart
+    fi
+
+    # reload lxc config
+    service lxc reload
+
+  fi
+fi
