@@ -348,10 +348,26 @@ TIMEOUTclose = 0
     aptconf="Acquire::http::User-Agent \"TurnKey APT-HTTP/1.3 (${version} lxc)\";"
     echo ${aptconf} > ${rootfs}/etc/apt/apt.conf.d/01turnkey
 
+    # append user supplied apt-proxy to inithooks.conf
     if [ -n "${aptproxy}" ]; then
-        info "configuring apt-proxy..."
-        aptconf="Acquire::http::Proxy \"${aptproxy}\";"
-        echo ${aptconf} > ${rootfs}/etc/apt/apt.conf.d/01proxy
+        info "appending apt-proxy to inithooks.conf..."
+        aptconf="export APT_PROXY=\"${aptproxy}\""
+        echo ${aptconf} >> ${rootfs}/etc/inithooks.conf
+    fi
+
+    # copy proxy files to container
+    fb_proxy="/usr/lib/inithooks/firstboot.d/10proxy"
+
+    if [ ! -f "${rootfs}/${fb_proxy}" ]; then
+      info "copying firstboot proxy script..."
+      cp -a ${fb_proxy} ${rootfs}/${fb_proxy}
+    fi
+
+    apt_proxy="/etc/network/if-up.d/apt-proxy"
+
+    if [ ! -f "${rootfs}/${apt_proxy}" ]; then
+      info "copying /etc/network/if-up.d/apt-proxy script..."
+      cp -a ${apt_proxy} ${rootfs}/${apt_proxy}
     fi
 
     ## Security Hardening
