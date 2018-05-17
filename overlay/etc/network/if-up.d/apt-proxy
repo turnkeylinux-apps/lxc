@@ -6,7 +6,7 @@ ENV="/proc/1/environ"
 
 get_proxy() {
   # in container, get apt-proxy from root environment
-  APT_PROXY="$(cat ${ENV} | tr '\0' '\n' | awk -F= '/APT_PROXY/ { print $2 }')"
+  APT_PROXY="$(cat ${ENV} | tr '\0' '\n' | tr -d '"' | awk -F= '/APT_PROXY/ { print $2 }')"
 }
 
 check_proxy() {
