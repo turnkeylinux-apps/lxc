@@ -657,7 +657,7 @@ esac
 
 [ ${hostarch} = "i386" -a ${arch} = "amd64" ] && fatal "can't create ${arch} container on ${hostarch}"
 
-type debootstrap
+type debootstrap > /dev/null 2>&1
 [ $? -ne 0 ] && fatal "'debootstrap' command is missing"
 
 case "${version}" in
