@@ -709,6 +709,8 @@ case "${tkl_version}" in
        *)	signature="${image}.hash";;
 esac
 
+info "begin creating container ${name}..."
+
 install_turnkey ${image} ${rootfs}
 [ $? -ne 0 ] && fatal "failed to install turnkey ${app_name}"
 
@@ -728,4 +730,5 @@ post_process ${rootfs} ${deb_release} ${arch} ${hostarch}
 [ $? -ne 0 ] && fatal "failed post-processing"
 
 # completed
+info "successfully completed creating container ${name}."
 exit 0
