@@ -85,6 +85,12 @@ EOF
     [ -e "${rootfs}/etc/mtab" ] && rm ${rootfs}/etc/mtab
     ln -s /proc/self/mounts ${rootfs}/etc/mtab
 
+    # mount special filesystems for chroot into container
+    mount --bind /proc ${rootfs}/proc
+    mount --bind /sys ${rootfs}/sys
+    mount --bind /dev ${rootfs}/dev
+    mount --bind /dev/pts ${rootfs}/dev/pts
+
     # disable selinux in debian
     mkdir -p ${rootfs}/selinux
     echo 0 > ${rootfs}/selinux/enforce
@@ -545,6 +551,12 @@ EOF
         # Write a new sources.list containing native entries
         write_sourceslist ${rootfs} ${deb_release}
     fi
+
+    # unmount container special filesystems
+    umount ${rootfs}/dev/pts
+    umount ${rootfs}/dev
+    umount ${rootfs}/sys
+    umount ${rootfs}/proc
 
     # Re-enable service startup
     rm ${rootfs}/usr/sbin/policy-rc.d
