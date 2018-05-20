@@ -1,17 +1,30 @@
 #!/bin/bash -e
 # configure apt-cacher-ng when interface br0 comes up
 
-CONF="/etc/apt-cacher-ng/acng.conf"
-
 if [ "$IFACE" = "br0" ]; then
-  BR0_IP=$(ip route | sed -rn '/ br0/{ s/.*src (\S+).*/\1/p }')
-  BINDADDRESS="BindAddress: ${BR0_IP}"
-  APT_PROXY="http://${BR0_IP}:3142"
+  IP_BR0=$(ip route list scope link dev br0 | sed -rn '{ s/.*src (\S+).*/\1/p }')
+  CIDR_BR0=$(ip route list scope link dev br0 | sed -rn '{ s/^(\S+).*/\1/p }')
+  CIDR_NATBR0=$(ip route list scope link dev natbr0 | sed -rn '{ s/^(\S+).*/\1/p }')
+  BINDADDRESS="BindAddress: ${IP_BR0}"
+  APT_PROXY="http://${IP_BR0}:3142"
+  HOSTS_ALLOW="apt-cacher-ng : ${CIDR_BR0} ${CIDR_NATBR0}"
+
+  CONF="/etc/apt-cacher-ng/acng.conf"
 
   # check if BindAddress has changed
   if ! grep -qc "${BINDADDRESS}" ${CONF}; then
     # update apt-cacher-ng config
     sed -i "/^BindAddress: /c ${BINDADDRESS}" ${CONF}
+
+    # update hosts.{allow|deny}
+    if grep -qc "^apt-cacher-ng" /etc/hosts.allow; then
+      # update hosts.allow
+      sed -i "/^apt-cacher-ng/c ${HOSTS_ALLOW}" /etc/hosts.allow
+    else
+      # add apt-cacher-ng
+      echo "${HOSTS_ALLOW}" >> /etc/hosts.allow
+      echo "apt-cacher-ng : 0.0.0.0" >> /etc/hosts.deny
+    fi
 
     # update lxc.environment
     sed -i "/^lxc.environment/c lxc.environment = APT_PROXY=${APT_PROXY}" /etc/lxc/common.conf
