@@ -332,9 +332,11 @@ configure_turnkey() {
     info "disabling ntp servers..."
     sed -i '/^NTPSERVERS=/ s/".*"/""/' ${rootfs}/etc/default/ntpdate
     
-    info "patch container for sysvinit"
-    sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init/cgmanager.conf
-    sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init.d/cgmanager
+    if [ "${deb_release}" == "jessie" ]; then
+      info "patch container for sysvinit"
+      sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init/cgmanager.conf
+      sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init.d/cgmanager
+    fi
 
     if ! sed -n '/^\[shellinabox\]/,/^\[/ p' ${stunnel_conf} | grep -q "TIMEOUTclose"
     then
