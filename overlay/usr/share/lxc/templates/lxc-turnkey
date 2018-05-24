@@ -57,6 +57,19 @@ info() { echo "INFO [$(basename $0)]: $@"; }
 warn() { echo "WARN [$(basename $0)]: $@" 1>&2; return 1; }
 fatal() { echo "FATAL [$(basename $0)]: $@" 1>&2; exit 1; }
 
+download() {
+    # download url to destination dir trying multiple mirror hosts
+    local url=$1
+    local dir=$2
+    local tries=5
+
+    for (( i=0; i<${tries}; i=i+1 )); do
+        wget --read-timeout=10 -t3 -qNc "${url}" -P "${dir}"
+        [ $? = 0 ] && return 0;
+    done
+    return 1;
+}
+
 configure_debian() {
     local rootfs=$1
     local name=$2
@@ -258,8 +271,8 @@ get_image_name() {
 }
 
 download_signature() {
-    info "downloading appliance signature..."
-    wget --read-timeout=10 -t 3 -nv -c ${baseurl}/${signature} -O ${TMP}/${signature}
+    info "downloading appliance signature ${signature}..."
+    download "${baseurl}/${signature}" "${TMP}"
     if [ $? -ne 0 ]; then
         verify_signature ${cache} ${image} ${signature}
     elif cmp -s "${TMP}/${signature}" "${cache}/${signature}" ; then
@@ -280,8 +293,8 @@ download_image() {
     # make sure that signature file has been downloaded to ${TMP}
     [ ! -f "${TMP}/${signature}" ] && fatal "signature ${TMP}/${signature} not found"
 
-    info "downloading appliance image..."
-    wget --read-timeout=10 -t 3 -c ${baseurl}/${image} -O ${TMP}/${image}
+    info "downloading appliance image ${image}..."
+    download "${baseurl}/${image}" "${TMP}"
     if [ $? -eq 0 ]; then
         verify_signature ${TMP} ${image} ${signature}
         mv ${TMP}/${image} ${cache}/${image}
