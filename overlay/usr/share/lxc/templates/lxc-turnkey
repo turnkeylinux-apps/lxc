@@ -109,7 +109,9 @@ EOF
     echo 0 > ${rootfs}/selinux/enforce
 
     # always make sure resolv.conf is up to date in the target
-    cp /etc/resolv.conf ${rootfs}/etc/resolv.conf
+    if [ ! -e ${rootfs}/etc/resolv.conf ]; then
+        cp /etc/resolv.conf ${rootfs}/etc/resolv.conf
+    fi
 
     # set the hostname
     sed -i "/^iface.*dhcp$/,/^$/!b;/^$/i\hostname ${name}" ${rootfs}/etc/network/interfaces
