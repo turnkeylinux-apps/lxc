@@ -133,10 +133,10 @@ EOF
     fi
 
     # disable pointless services in a container, only if they are installed
-    [ -f ${rootfs}/etc/init.d/checkroot.sh ] && chroot ${rootfs} /usr/sbin/update-rc.d -f checkroot.sh disable
-    [ -f ${rootfs}/etc/init.d/umountfs ] && chroot ${rootfs} /usr/sbin/update-rc.d -f umountfs disable
-    [ -f ${rootfs}/etc/init.d/hwclock.sh ] && chroot ${rootfs} /usr/sbin/update-rc.d -f hwclock.sh disable
-    [ -f ${rootfs}/etc/init.d/hwclockfirst.sh ] && chroot ${rootfs} /usr/sbin/update-rc.d -f hwclockfirst.sh disable
+    [ -f ${rootfs}/etc/init.d/checkroot.sh ] && chroot ${rootfs} /usr/sbin/update-rc.d -f checkroot.sh disable > /dev/null 2>&1
+    [ -f ${rootfs}/etc/init.d/umountfs ] && chroot ${rootfs} /usr/sbin/update-rc.d -f umountfs disable > /dev/null 2>&1
+    [ -f ${rootfs}/etc/init.d/hwclock.sh ] && chroot ${rootfs} /usr/sbin/update-rc.d -f hwclock.sh disable > /dev/null 2>&1
+    [ -f ${rootfs}/etc/init.d/hwclockfirst.sh ] && chroot ${rootfs} /usr/sbin/update-rc.d -f hwclockfirst.sh disable > /dev/null 2>&1
 
     # set initial timezone as on host
     if [ -f /etc/timezone ]; then
