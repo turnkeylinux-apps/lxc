@@ -432,6 +432,7 @@ X11Forwarding no\
 TCPKeepAlive no\
 AllowTcpForwarding no\
 ClientAliveCountMax 2\
+ClientAliveInterval 1h\
 MaxAuthTries 2\
 MaxSessions 2
         }'  ${CONF}
