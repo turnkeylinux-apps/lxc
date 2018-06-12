@@ -11,4 +11,5 @@ if [ -n "${APT_PROXY}" ]; then
   mkdir -p /root/.bashrc.d
   echo "# default proxy settings" > ${CONF} 
   echo "export APT_PROXY=${APT_PROXY}" >> ${CONF}
+  chmod +x ${CONF}
 fi
