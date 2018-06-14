@@ -1,8 +1,9 @@
 #!/bin/bash -e
 # get apt-proxy and configure /etc/apt/apt.conf.d/01proxy
 
+ENV="/proc/1/environ"
+
 get_proxy() {
-  local ENV="/proc/1/environ"
   # in container, get apt-proxy from root environment
   APT_PROXY="$(cat ${ENV} | tr '\0' '\n' | tr -d '"' | awk -F= '/APT_PROXY/ { print $2 }')"
 }
