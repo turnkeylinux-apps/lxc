@@ -7,7 +7,12 @@ set_proxy() {
 }
 
 if [ "$IFACE" = "br0" ]; then
-  EXT_PROXY=${APT_PROXY}  # if APT_PROXY is defined, use it as external proxy
+  # get apt-proxy setting, if defined
+  [ -e /root/.bashrc.d/apt-proxy ] && . /root/.bashrc.d/apt-proxy
+
+  # if APT_PROXY is defined, use it as external proxy
+  EXT_PROXY=${APT_PROXY}
+
   IP_BR0=$(ip route list scope link dev br0 | sed -rn '{ s/.*src (\S+).*/\1/p }')
   BINDADDRESS="BindAddress: localhost ${IP_BR0}"
   APT_PROXY="http://${IP_BR0}:3142"
