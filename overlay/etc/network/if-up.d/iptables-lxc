@@ -1,8 +1,20 @@
 #!/bin/bash
 
+# append iptables rule at end of table, unless it exists
 iptables_add() {
     args=$@
     if ! iptables -C $args >/dev/null 2>&1; then iptables -A $args; fi
+}
+
+# insert iptables rule at top of table, unless it exists
+iptables_insert() {
+    args=$@
+    if ! iptables -C $args >/dev/null 2>&1; then iptables -I $args; fi
+}
+
+cidr() {
+    ip route list scope link dev $1 | sed -rn '{ s/^(\S+).*/\1/p }'
+    return
 }
 
 #Creating default policies
@@ -11,37 +23,41 @@ iptables -P OUTPUT ACCEPT
 iptables -P FORWARD DROP # we're not a router
 
 if [ "$IFACE" = "lo" ]; then
+    # Drop invalid packets
+    iptables_add INPUT -m state --state INVALID -j DROP
     # Allow traffic on loopback
-    iptables_add INPUT -i lo -j ACCEPT
-    iptables_add OUTPUT -o lo -j ACCEPT
+    iptables_add INPUT  -i lo -j ACCEPT
+    # Allow connections to apt-cacher-ng from containers, reject others
+    iptables_add INPUT -i br0 -p tcp --dport 3142 -j ACCEPT
+    iptables_add INPUT -i natbr0 -p tcp --dport 3142 -j ACCEPT
+    iptables_add INPUT -p tcp --dport 3142  -j REJECT --reject-with tcp-reset
+    iptables_add INPUT -p tcp --dport 3142  -j DROP
     # Allow established connections to continue
-    iptables_add INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-    iptables_add OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+    iptables_add INPUT   -m state --state ESTABLISHED,RELATED -j ACCEPT
     iptables_add FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 fi
 
 if [ "$IFACE" = "br0" ]; then
-    # Allow inbound connections
-    iptables_add INPUT -i br0 -j ACCEPT
-    iptables_add INPUT -p tcp --dport 22 -j ACCEPT #SSH
-    iptables_add INPUT -p tcp --dport 53 -j ACCEPT #DNS
-    iptables_add INPUT -p tcp --dport 80 -j ACCEPT #HTTP
-    iptables_add INPUT -p tcp --dport 443 -j ACCEPT #HTTPS
-    iptables_add INPUT -p UDP --dport 67:68 -j ACCEPT #DHCP
-    iptables_add INPUT -p udp --dport 53 -j ACCEPT #DNS
-    iptables_add INPUT -p tcp --dport 12320 -j ACCEPT #HTTPS
-    iptables_add INPUT -p tcp --dport 12321 -j ACCEPT #HTTPS
-    iptables_add INPUT -p tcp --dport 12322 -j ACCEPT #HTTPS
-    iptables_add FORWARD -i br0 -j ACCEPT
-    iptables_add POSTROUTING -t nat -o br0 -j MASQUERADE
+    CIDR=$(cidr br0)
+    # Accept all packets from br0 containers
+    iptables_add INPUT   -s $CIDR -i br0 -j ACCEPT
+    iptables_add FORWARD -s $CIDR -i br0 -m conntrack --ctstate NEW -j ACCEPT
 fi
 
 if [ "$IFACE" = "natbr0" ]; then
-    CIDR=192.168.121.0/24
-    iptables_add INPUT -s $CIDR -i natbr0 -j ACCEPT
-    iptables_add OUTPUT -d $CIDR -o natbr0 -j ACCEPT
-    iptables_add FORWARD -i natbr0 -s $CIDR -j ACCEPT
-    iptables_add POSTROUTING -t nat -s $CIDR ! -o natbr0 -j MASQUERADE
-    iptables_add POSTROUTING -t mangle -p udp --dport bootpc -s $CIDR -j CHECKSUM --checksum-fill
+    CIDR=$(cidr natbr0)
+    # Drop external connections to natbr0 containers
+    iptables_insert FORWARD -d 192.168.121.0/24 -p tcp -m conntrack --ctstate NEW -j DROP
+    # Drop external pings to natbr0 containers
+    iptables_insert FORWARD -d 192.168.121.0/24 -p icmp -m icmp --icmp-type 8 -j DROP
+    # Accept all packets from natbr0 containers
+    iptables_add INPUT   -s $CIDR -i natbr0 -j ACCEPT
+    iptables_add FORWARD -s $CIDR -i natbr0  -m conntrack --ctstate NEW -j ACCEPT
+    # Accept broadcasts from DHCP
+    iptables_add INPUT   -i natbr0 -p udp -m udp --sport 68 --dport 67 -j ACCEPT #DHCP
+    # Masquerade natbr0 containers
+    iptables_add POSTROUTING -t nat -s $CIDR ! -d $CIDR -j MASQUERADE
+    # Correct checksums for bootpc
+    iptables_add POSTROUTING -t mangle -o natbr0 -p udp --dport bootpc -j CHECKSUM --checksum-fill
 fi
 
