@@ -27,14 +27,14 @@ if [ "$IFACE" = "lo" ]; then
     iptables_add INPUT -m state --state INVALID -j DROP
     # Allow traffic on loopback
     iptables_add INPUT  -i lo -j ACCEPT
-    # Allow connections to apt-cacher-ng from containers, reject others
-    iptables_add INPUT -i br0 -p tcp --dport 3142 -j ACCEPT
-    iptables_add INPUT -i natbr0 -p tcp --dport 3142 -j ACCEPT
-    iptables_add INPUT -p tcp --dport 3142  -j REJECT --reject-with tcp-reset
-    iptables_add INPUT -p tcp --dport 3142  -j DROP
     # Allow established connections to continue
     iptables_add INPUT   -m state --state ESTABLISHED,RELATED -j ACCEPT
     iptables_add FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+fi
+
+if [ "$IFACE" = "eth0" ]; then
+    # Use ebtables to block external traffic to apt-cacher-ng
+    ebtables -t filter -A INPUT -p IPv4 -i eth0 --ip-proto tcp --ip-dport 3142 -j DROP
 fi
 
 if [ "$IFACE" = "br0" ]; then
