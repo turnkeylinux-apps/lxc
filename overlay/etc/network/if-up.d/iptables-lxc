@@ -28,7 +28,7 @@ if [ "$IFACE" = "lo" ]; then
     # Allow traffic on loopback
     iptables_add INPUT  -i lo -j ACCEPT
     # Allow established connections to continue
-    iptables_add INPUT   -m state --state ESTABLISHED,RELATED -j ACCEPT
+    iptables_add INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
     iptables_add FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 fi
 
@@ -40,7 +40,7 @@ fi
 if [ "$IFACE" = "br0" ]; then
     CIDR=$(cidr br0)
     # Accept all packets from br0 containers
-    iptables_add INPUT   -s $CIDR -i br0 -j ACCEPT
+    iptables_add INPUT -s $CIDR -i br0 -m conntrack --ctstate NEW -j ACCEPT
     iptables_add FORWARD -s $CIDR -i br0 -m conntrack --ctstate NEW -j ACCEPT
 fi
 
@@ -51,7 +51,7 @@ if [ "$IFACE" = "natbr0" ]; then
     # Drop external pings to natbr0 containers
     iptables_insert FORWARD -d 192.168.121.0/24 -p icmp -m icmp --icmp-type 8 -j DROP
     # Accept all packets from natbr0 containers
-    iptables_add INPUT   -s $CIDR -i natbr0 -j ACCEPT
+    iptables_add INPUT -s $CIDR -i natbr0  -m conntrack --ctstate NEW -j ACCEPT
     iptables_add FORWARD -s $CIDR -i natbr0  -m conntrack --ctstate NEW -j ACCEPT
     # Accept broadcasts from DHCP
     iptables_add INPUT   -i natbr0 -p udp -m udp --sport 68 --dport 67 -j ACCEPT #DHCP
