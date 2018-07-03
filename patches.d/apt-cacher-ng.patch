@@ -1,0 +1,12 @@
+--- /usr/lib/apt-cacher-ng/report.html	2018-07-02 01:22:23.153365261 +0000
++++ /usr/lib/apt-cacher-ng/report.html.patched	2018-07-03 03:53:13.488905130 +0000
+@@ -16,8 +16,8 @@
+          <table border=0 cellpadding=2 cellspacing=1 bgcolor="black">
+                  <tr>
+                          <td class="coltitle"> </td>
+-                         <td class="coltitle">Since startup</td>
+                          <td class="coltitle">Recent history</td>
++                         <td class="coltitle">Since startup</td>
+                  </tr>
+                  <tr>
+                          <td class="coltitle" style="text-align:left">Data fetched:</td>
