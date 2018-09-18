@@ -1,0 +1,122 @@
+#!/usr/bin/python3
+"""LXC dnsmasq helper app
+
+usage: lxc-dnsmasq-update [-h] (-a | -d) name
+
+LXC dnsmasq helper app
+
+positional arguments:
+  name          the container name
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -a, --add     add container to DNS
+  -d, --delete  delete container leases and remove from DNS
+
+
+Rationale:
+    Previous versions of LXC appliance relied on the upstream dhcp/DNS services when creating
+    bridged 'br0' containers. This has led to problems while scripting the creation and testing
+    of containers due to delays in the upstream services, particularly when using Ansible(TM).
+
+    When called by a wrapper for the lxc-start command, lxc-dnsmasq-update adds a host entry
+    for the container to the dnsmasq host table, and then restarts dnsmasq so the result is
+    available immediately.
+
+    Destroying an LXC container leaves behind a number of unused resources including dhcp leases.
+    This program is intended to be called by a wrapper for the lxc-destroy command. It must be
+    called before the container is destroyed. If the container is stopped, it will temporarily be
+    restarted until the dhcp leases are released, and then stopped.
+
+    lxc-dnsmasq-update releases a container's dhcp lease by sending the kill SIGUSR2 signal to the
+    udhcpc daemon in the running container. Unlike dnsmasq's dhcp_release, this method works for
+    all types of containers.
+
+Note:
+    Ansible(TM) uses the python-lxc API's to create and manipulate containers, and therefore will
+    not use the wrapper scripts for lxc-start and lxc-destroy. Ansible playbooks must include a
+    call to lxc-dnsmasq-update using 'command:' after starting the container for the first time
+    and before destroying the container.
+"""
+import os
+import sys
+import glob
+import argparse
+import lxc
+
+def dhcp_release():
+    for path in glob.glob('/var/run/udhcpc.*.pid'):
+        pid_file = open(path,'r')
+        pid = pid_file.read()
+        os.system("kill -12 %s" % pid)
+
+def main():
+    parser = argparse.ArgumentParser(description='LXC dnsmasq helper app')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-a", "--add", action="store_true", help="add container to DNS")
+    group.add_argument("-d", "--delete", action="store_true", help="delete container leases and remove from DNS")
+    parser.add_argument("name", action="store", help="the container name")
+    args = parser.parse_args()
+
+    # Get the container name
+    name = args.name
+
+    # Setup the container object
+    container = lxc.Container(name)
+    if not container.defined:
+        print("Container %s doesn't exist:" % name, file=sys.stderr)
+        sys.exit(1)
+
+    # Start the container (if not started)
+    started = False
+    if not container.running:
+        if not container.start():
+            print("Container %s won't start:" % name, file=sys.stderr)
+            sys.exit(1)
+        started = True
+
+    if not container.state == "RUNNING":
+        print("Container %s not running:" % name, file=sys.stderr)
+        sys.exit(1)
+
+    # Wait for connectivity
+    if not container.get_ips(timeout=30):
+        print("Container %s not connected:" % name, file=sys.stderr)
+        sys.exit(1)
+
+    # Update dnsmasq host table entry
+    entry = container.get_ips(timeout=.5)[0] + " " + container.name
+
+    if args.add:
+        # Add entry to dnsmasq hosts
+        with open('/etc/hosts.dnsmasq', 'r+') as hosts:
+            for line in hosts:
+                if line.startswith(entry):
+                    break
+            else:
+                print(entry, file=hosts)
+
+    if args.delete:
+        # Remove entry from dnsmasq hosts
+        output = []
+        with open('/etc/hosts.dnsmasq', 'r') as hosts:
+            for line in hosts:
+                if not line.startswith(entry):
+                    output.append(line)
+
+        with open('/etc/hosts.dnsmasq', 'w') as hosts:
+            hosts.writelines(output)
+
+        # Release all dhcp leases
+        container.attach_wait(dhcp_release)
+
+    # Shutdown the container
+    if started:
+        if not container.shutdown(30):
+            container.stop()
+
+    # Restart dnsmasq
+    os.system("service dnsmasq restart")
+
+if __name__ == "__main__":
+    main()

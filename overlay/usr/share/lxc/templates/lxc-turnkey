@@ -57,6 +57,19 @@ info() { echo "INFO [$(basename $0)]: $@"; }
 warn() { echo "WARN [$(basename $0)]: $@" 1>&2; return 1; }
 fatal() { echo "FATAL [$(basename $0)]: $@" 1>&2; exit 1; }
 
+download() {
+    # download url to destination dir trying multiple mirror hosts
+    local url=$1
+    local dir=$2
+    local tries=5
+
+    for (( i=0; i<${tries}; i=i+1 )); do
+        wget --read-timeout=10 -t3 -qNc "${url}" -P "${dir}"
+        [ $? = 0 ] && return 0;
+    done
+    return 1;
+}
+
 configure_debian() {
     local rootfs=$1
     local name=$2
@@ -85,12 +98,20 @@ EOF
     [ -e "${rootfs}/etc/mtab" ] && rm ${rootfs}/etc/mtab
     ln -s /proc/self/mounts ${rootfs}/etc/mtab
 
+    # mount special filesystems for chroot into container
+    mount --bind /proc ${rootfs}/proc
+    mount --bind /sys ${rootfs}/sys
+    mount --bind /dev ${rootfs}/dev
+    mount --bind /dev/pts ${rootfs}/dev/pts
+
     # disable selinux in debian
     mkdir -p ${rootfs}/selinux
     echo 0 > ${rootfs}/selinux/enforce
 
     # always make sure resolv.conf is up to date in the target
-    cp /etc/resolv.conf ${rootfs}/etc/resolv.conf
+    if [ ! -e ${rootfs}/etc/resolv.conf ]; then
+        cp /etc/resolv.conf ${rootfs}/etc/resolv.conf
+    fi
 
     # set the hostname
     sed -i "/^iface.*dhcp$/,/^$/!b;/^$/i\hostname ${name}" ${rootfs}/etc/network/interfaces
@@ -112,10 +133,10 @@ EOF
     fi
 
     # disable pointless services in a container, only if they are installed
-    [ -f ${rootfs}/etc/init.d/checkroot.sh ] && chroot ${rootfs} /usr/sbin/update-rc.d -f checkroot.sh disable
-    [ -f ${rootfs}/etc/init.d/umountfs ] && chroot ${rootfs} /usr/sbin/update-rc.d -f umountfs disable
-    [ -f ${rootfs}/etc/init.d/hwclock.sh ] && chroot ${rootfs} /usr/sbin/update-rc.d -f hwclock.sh disable
-    [ -f ${rootfs}/etc/init.d/hwclockfirst.sh ] && chroot ${rootfs} /usr/sbin/update-rc.d -f hwclockfirst.sh disable
+    [ -f ${rootfs}/etc/init.d/checkroot.sh ] && chroot ${rootfs} /usr/sbin/update-rc.d -f checkroot.sh disable > /dev/null 2>&1
+    [ -f ${rootfs}/etc/init.d/umountfs ] && chroot ${rootfs} /usr/sbin/update-rc.d -f umountfs disable > /dev/null 2>&1
+    [ -f ${rootfs}/etc/init.d/hwclock.sh ] && chroot ${rootfs} /usr/sbin/update-rc.d -f hwclock.sh disable > /dev/null 2>&1
+    [ -f ${rootfs}/etc/init.d/hwclockfirst.sh ] && chroot ${rootfs} /usr/sbin/update-rc.d -f hwclockfirst.sh disable > /dev/null 2>&1
 
     # set initial timezone as on host
     if [ -f /etc/timezone ]; then
@@ -252,8 +273,8 @@ get_image_name() {
 }
 
 download_signature() {
-    info "downloading appliance signature..."
-    wget --read-timeout=10 -t 3 -nv -c ${baseurl}/${signature} -O ${TMP}/${signature}
+    info "downloading appliance signature ${signature}..."
+    download "${baseurl}/${signature}" "${TMP}"
     if [ $? -ne 0 ]; then
         verify_signature ${cache} ${image} ${signature}
     elif cmp -s "${TMP}/${signature}" "${cache}/${signature}" ; then
@@ -274,8 +295,8 @@ download_image() {
     # make sure that signature file has been downloaded to ${TMP}
     [ ! -f "${TMP}/${signature}" ] && fatal "signature ${TMP}/${signature} not found"
 
-    info "downloading appliance image..."
-    wget --read-timeout=10 -t 3 -c ${baseurl}/${image} -O ${TMP}/${image}
+    info "downloading appliance image ${image}..."
+    download "${baseurl}/${image}" "${TMP}"
     if [ $? -eq 0 ]; then
         verify_signature ${TMP} ${image} ${signature}
         mv ${TMP}/${image} ${cache}/${image}
@@ -302,7 +323,6 @@ extract_image() {
 configure_turnkey() {
     local rootfs=$1
     local inithooks=$2
-    local aptproxy=$3
     local stunnel_conf=${rootfs}/etc/stunnel/stunnel.conf
 
     info "inserting inithooks.conf..."
@@ -314,9 +334,11 @@ configure_turnkey() {
     info "disabling ntp servers..."
     sed -i '/^NTPSERVERS=/ s/".*"/""/' ${rootfs}/etc/default/ntpdate
     
-    info "patch container for sysvinit"
-    sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init/cgmanager.conf
-    sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init.d/cgmanager
+    if [ "${deb_release}" == "jessie" ]; then
+      info "patch container for sysvinit"
+      sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init/cgmanager.conf
+      sed -i "s/systemd/sysvinit/g" ${rootfs}/etc/init.d/cgmanager
+    fi
 
     if ! sed -n '/^\[shellinabox\]/,/^\[/ p' ${stunnel_conf} | grep -q "TIMEOUTclose"
     then
@@ -348,10 +370,19 @@ TIMEOUTclose = 0
     aptconf="Acquire::http::User-Agent \"TurnKey APT-HTTP/1.3 (${version} lxc)\";"
     echo ${aptconf} > ${rootfs}/etc/apt/apt.conf.d/01turnkey
 
-    if [ -n "${aptproxy}" ]; then
-        info "configuring apt-proxy..."
-        aptconf="Acquire::http::Proxy \"${aptproxy}\";"
-        echo ${aptconf} > ${rootfs}/etc/apt/apt.conf.d/01proxy
+    # copy proxy files to container
+    fb_proxy="/usr/lib/inithooks/firstboot.d/10proxy"
+
+    if [ ! -f "${rootfs}/${fb_proxy}" ]; then
+      info "copying firstboot proxy script..."
+      cp -a ${fb_proxy} ${rootfs}/${fb_proxy}
+    fi
+
+    apt_proxy="/etc/network/if-up.d/apt-proxy"
+
+    if [ ! -f "${rootfs}/${apt_proxy}" ]; then
+      info "copying /etc/network/if-up.d/apt-proxy script..."
+      cp -a ${apt_proxy} ${rootfs}/${apt_proxy}
     fi
 
     ## Security Hardening
@@ -401,6 +432,7 @@ X11Forwarding no\
 TCPKeepAlive no\
 AllowTcpForwarding no\
 ClientAliveCountMax 2\
+ClientAliveInterval 1h\
 MaxAuthTries 2\
 MaxSessions 2
         }'  ${CONF}
@@ -456,6 +488,7 @@ copy_configuration() {
     local rootfs=$2
     local name=$3
     local arch=${4:="x86_64"}
+    local aptproxy=$5
 
     [[ ${arch} == "amd64" ]] && arch="x86_64"
 
@@ -477,6 +510,12 @@ copy_configuration() {
     echo "" >> ${path}/config
     echo "# Container specific configuration" >> ${path}/config
     grep -q "^lxc.rootfs" ${path}/config 2> /dev/null || echo "lxc.rootfs = ${rootfs}" >> ${path}/config
+
+    # Add user supplied apt-proxy to container config
+    if [ -n "${aptproxy}" ]; then
+        aptconf="lxc.environment = APT_PROXY=${aptproxy}"
+        echo ${aptconf} >> ${path}/config
+    fi
 
     cat <<EOF >> ${path}/config
 lxc.mount.auto = cgroup:mixed
@@ -531,6 +570,12 @@ EOF
         write_sourceslist ${rootfs} ${deb_release}
     fi
 
+    # unmount container special filesystems
+    umount ${rootfs}/dev/pts
+    umount ${rootfs}/dev
+    umount ${rootfs}/sys
+    umount ${rootfs}/proc
+
     # Re-enable service startup
     rm ${rootfs}/usr/sbin/policy-rc.d
 
@@ -569,7 +614,7 @@ Options::
 
     -a --arch=       Appliance architecture (default: hosts architecture)
     -v --version=    Appliance version (default: latest available)
-    -x --aptproxy=   Address of APT Proxy (e.g., http://192.168.121.1:3142)
+    -x --aptproxy=   Address of APT Proxy (default: internal apt-cacher-ng)
 
     -i --inithooks=  Path to inithooks.conf (default: /root/inithooks.conf)
                      Reference: https://www.turnkeylinux.org/docs/inithooks
@@ -642,16 +687,16 @@ esac
 
 [ ${hostarch} = "i386" -a ${arch} = "amd64" ] && fatal "can't create ${arch} container on ${hostarch}"
 
-type debootstrap
+type debootstrap > /dev/null 2>&1
 [ $? -ne 0 ] && fatal "'debootstrap' command is missing"
 
 case "${version}" in
-    12.[0-1]-squeeze) fatal "turnkey version ${version} is no longer supported:";;
-    13.0-wheezy)      fatal "turnkey version ${version} is no longer supported:";;
-    14.0-wheezy)      fatal "turnkey version ${version} is no longer supported:";;
-    14.[1-9]-jessie)  deb_version="debian-8";;
-    15.[0-9]-stretch) deb_version="debian-9";;
-                   *) fatal "turnkey version ${version} is not recognized:"
+    12.[0-1]*-squeeze) fatal "turnkey version ${version} is no longer supported:";;
+    13.0*-wheezy)      fatal "turnkey version ${version} is no longer supported:";;
+    14.0*-wheezy)      fatal "turnkey version ${version} is no longer supported:";;
+    14.[1-9]*-jessie)  deb_version="debian-8";;
+    15.[0-9]*-stretch) deb_version="debian-9";;
+                    *) fatal "turnkey version ${version} is not recognized:"
 esac
 
 tkl_version=$(echo ${version} | cut -d "-" -f 1)
@@ -694,16 +739,18 @@ case "${tkl_version}" in
        *)	signature="${image}.hash";;
 esac
 
+info "begin creating container ${name}..."
+
 install_turnkey ${image} ${rootfs}
 [ $? -ne 0 ] && fatal "failed to install turnkey ${app_name}"
 
 configure_debian ${rootfs} ${name}
 [ $? -ne 0 ] && fatal "failed to configure debian for a container"
 
-configure_turnkey ${rootfs} ${inithooks} ${aptproxy}
+configure_turnkey ${rootfs} ${inithooks}
 [ $? -ne 0 ] && fatal "failed to configure turnkey for a container"
 
-copy_configuration ${path} ${rootfs} ${name} ${arch}
+copy_configuration ${path} ${rootfs} ${name} ${arch} ${aptproxy}
 [ $? -ne 0 ] && fatal "failed write configuration file"
 
 configure_debian_systemd ${path} ${rootfs}
@@ -713,4 +760,5 @@ post_process ${rootfs} ${deb_release} ${arch} ${hostarch}
 [ $? -ne 0 ] && fatal "failed post-processing"
 
 # completed
+info "successfully completed creating container ${name}."
 exit 0

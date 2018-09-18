@@ -21,10 +21,10 @@ the template. For example, to show the templates usage we could run::
     Options::
 
         -a --arch=       Appliance architecture (default: hosts architecture)
-        -v --version=    Appliance version (default: 14.2-jessie)
-        -x --aptproxy=   Address of APT Proxy (e.g., http://192.168.121.1:3142)
+        -v --version=    Appliance version (default: latest available)
+        -x --aptproxy=   Address of APT Proxy (default: internal apt-cacher-ng)
 
-        -i --inithooks=  Path to inithooks.conf (e.g., /root/inithooks.conf)
+        -i --inithooks=  Path to inithooks.conf (default: /root/inithooks.conf)
                          Reference: https://www.turnkeylinux.org/docs/inithooks
 
            --rootfs=     Path to root filesystem (default: $path/$name/rootfs)
@@ -37,7 +37,7 @@ the template. For example, to show the templates usage we could run::
 
     Example usage::
 
-        lxc-create -n core -f /etc/lxc/bridge.conf -t turnkey -- core -i /root/inithooks.conf -v 14.1-jessie
+        lxc-create -n core -f /etc/lxc/bridge.conf -t turnkey -- core -i /root/inithooks.conf
 
 Inithooks (preseeding)
 ----------------------
@@ -101,7 +101,7 @@ Usage: nginx-proxy
 ''''''''''''''''''
 
 The current version of nginx-proxy supports the v14.x appliances and is
-decoupled from lxc so it can proxy any upstream vm or container. Options have
+decoupled from lxc so it can proxy any upstream vm or container. Options
 exist which make it easier to cleanup when containers are removed and to better
 support the Ansible appliance. Templates now use the Jinja2 style, although
 Jinja2 is not yet used to render the output files. This feature may be added in
@@ -157,7 +157,25 @@ future versions. ::
         /etc/nginx/templates/default.j2
 
         # lxc template (preconfigured for ports 80, 443, 12320, 12321, 12322)
-        /etc/nginx/templates/container.j2    
+        /etc/nginx/templates/container.j2
+
+Usage: iptables-nat
+'''''''''''''''''''
+
+    Syntax: iptables-nat action s_port d_addr:d_port
+    Add or delete iptables nat configurations
+
+    Arguments::
+
+        action          action to perform (add|del|info)
+        s_port          source port on host
+        d_addr:d_port   destination ip address and port
+
+    Examples::
+
+        iptables-nat add 2222 192.168.121.150:22
+        iptables-nat del 2222 192.168.121.150:22
+
 
 Creating a container (wordpress, bridged)
 -----------------------------------------
@@ -167,37 +185,40 @@ Wordpress container using the bridged network configuration.
 
 1. Create the container::
 
-    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress -i /root/inithooks.conf -v 14.2-jessie
-    
-    This could have been shortened because -i|--inithooks now defaults to /root/inithooks.conf
-    Also version defaults to `14.2-jessie`.:
-    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress
-    
-2. Start the container in the background::
+    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress -i /root/inithooks.conf -v 15.0-stretch
 
-    # lxc-start -d -n wp1
+    This could have been shortened because -i|--inithooks now defaults to /root/inithooks.conf
+    and the version now defaults to `latest available`.:
+
+    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress
+
+2. Start the container::
+
+    # lxc-start -n wp1
+
+3. List the containers::
+
+    # lxc-ls -f
 
 Creating a container (wordpress, NAT)
 -------------------------------------
 
-Now we'll create a second TurnKey Wordpress container. 
+Now we'll create a second TurnKey Wordpress container.
 We'll also use the NAT bridge as it requires some
 extra steps to expose the containers services to the network.
 
-Additionally, we'll also specify an APT proxy (preconfigured on the 
-TurnKey LXC appliance) so other containers can leverage the cache.
-
 1. Create the container::
 
-    # lxc-create -n wp2 -f /etc/lxc/natbridge.conf -t turnkey -- wordpress -x http://192.168.121.1:3142
-    
+    # lxc-create -n wp2 -f /etc/lxc/natbridge.conf -t turnkey -- wordpress
+
     This could have been shortened because natbridge.conf is the default config:
-    # lxc-create -n wp2 -t turnkey -- wordpress -x http://192.168.121.1:3142
+
+    # lxc-create -n wp2 -t turnkey -- wordpress
 
 
-2. Start the container in the background::
+2. Start the container::
 
-    # lxc-start -d -n wp2
+    # lxc-start -n wp2
 
 3. Expose the containers web services to the network by creating an
    nginx site configuration to proxy all web requests (ports 80, 443,
@@ -236,6 +257,8 @@ Now we'll remove the container, wp2, we just created.
 
     # lxc-stop -k -n wp2
 
+    The kill option [-k] is optional and usually unnecessary.
+
 4. Destroy the container::
 
     # lxc-destroy -n wp2
@@ -243,6 +266,35 @@ Now we'll remove the container, wp2, we just created.
    or combine steps three and four::
 
     # lxc-destroy -f -n wp2
+
+Apt Caching Proxy
+-----------------
+
+The LXC appliance uses `apt-cacher-ng` listening on `port 3142` for a caching
+proxy server.  All containers are now configured by default to use the internal
+cache (no longer necessary to include the `-x` option on the command line).
+
+In some circumstances, it is desirable to use an external apt proxy.  For example,
+a small development shop with several developer workstations, a TKLdev appliance
+for building apps, an LXC appliance for testing, and other TurnKey appliances
+for various stages of development and production.  To conserve bandwidth, we want
+to have all workstations and appliances share a common apt proxy.
+
+When an external apt proxy is available, the LXC appliance will continue to configure
+all containers to use the internal `apt-cacher-ng` cache which will now forward
+the request to the external apt proxy.  This can be configured in one of two ways.
+
+1. If you are using preseeding, you can add the `url` of the external apt cache
+   to the `inithooks.conf` file::
+
+    export APT_PROXY=http://[external_proxy_host_domain||external_proxy_ip]:[port]
+
+   Note that the `url` must be compatible with apt's proxy specification.
+
+2. In all other cases, you can add the export line above to `/root/.bashrc.d/apt-proxy`
+   and then restart the appliance.  You can use this method if you forgot to
+   preseed, or if you want to change the external apt cache.
+
 
 .. _inithooks: https://www.turnkeylinux.org/docs/inithooks
 

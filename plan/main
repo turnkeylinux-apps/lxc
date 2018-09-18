@@ -7,6 +7,7 @@ bridge-utils
 nginx
 apt-cacher-ng
 python-requests
+ebtables
 
 /* required by lxc download template */
 xz-utils

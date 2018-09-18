@@ -1,0 +1,31 @@
+#!/bin/bash 
+# Wrapper for /usr/bin/lxc-start
+#
+# Add container to dnsmasq hosts when container is started
+#
+# Author: John Carver <dude4linux@gmail.com>
+
+ARGV=$@
+
+info() { echo "INFO: $@"; }
+fatal() { echo "FATAL: $@" 1>&2; exit 1; }
+
+name=
+
+while [[ -n $1 ]]; do
+  case "$1" in
+    -n|--name)      name="$2"; shift;;
+  esac
+  shift
+done
+
+[[ "$name" == "" ]] && fatal "must provide container name [-n|--name]"
+
+/usr/bin/lxc-start $ARGV
+
+if [[ $? -eq 0 ]]; then
+  /usr/local/bin/lxc-dnsmasq-update --add $name
+
+  exit 0
+fi
+

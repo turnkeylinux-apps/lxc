@@ -1,0 +1,75 @@
+#!/bin/bash -e
+# configure apt-cacher-ng when interface br0 comes up
+
+set_proxy() {
+  local CONF="/etc/apt/apt.conf.d/01proxy"
+  echo "Acquire::http::Proxy \"$1\";" > ${CONF}
+}
+
+if [ "$IFACE" = "br0" ]; then
+  # get apt-proxy setting, if defined
+  [ -e /root/.bashrc.d/apt-proxy ] && . /root/.bashrc.d/apt-proxy
+
+  # if APT_PROXY is defined, use it as external proxy
+  EXT_PROXY=${APT_PROXY}
+
+  IP_BR0=$(ip route list scope link dev br0 | sed -rn '{ s/.*src (\S+).*/\1/p }')
+  BINDADDRESS="BindAddress: localhost ${IP_BR0}"
+  APT_PROXY="http://${IP_BR0}:3142"
+
+  CONF="/etc/apt-cacher-ng/acng.conf"
+
+  # check if external proxy is defined
+  if [ -n "${EXT_PROXY}" ]; then
+    # check if external proxy is configured
+    if grep -qc "^Proxy: " ${CONF}; then
+      # replace external proxy
+      sed -i "{
+          /^Proxy: /c Proxy: ${EXT_PROXY}
+          /^OptProxyCheckCommand: /c OptProxyCheckCommand: curl --head --connect-timeout 2 ${EXT_PROXY} > /dev/null 2>&1
+      }" ${CONF}
+    else
+      # configure external proxy
+      sed -i '/# OptProxyTimeout: /a\
+\
+Proxy: '${EXT_PROXY}'\
+OptProxyCheckCommand: curl --head --connect-timeout 2 '${EXT_PROXY}' > /dev/null 2>&1\
+OptProxyCheckInterval: 300\
+OptProxyTimeout: 30' ${CONF}
+    fi
+
+    # set external proxy
+    set_proxy "${EXT_PROXY}"
+
+  else
+
+    # remove external proxy config
+    sed -i '{
+        /^Proxy: /d
+        /^OptProxyCheckCommand: /d
+        /^OptProxyCheckInterval: /d
+        /^OptProxyTimeout: /d
+    }' ${CONF}
+
+    # when external proxy is undefined, use internal proxy
+    set_proxy "${APT_PROXY}"
+  fi
+
+  # check if BindAddress has changed
+  if ! grep -qc "${BINDADDRESS}" ${CONF}; then
+    # update apt-cacher-ng config
+    sed -i "/^BindAddress: /c ${BINDADDRESS}" ${CONF}
+
+    # update lxc.environment
+    sed -i "/^lxc.environment/c lxc.environment = APT_PROXY=${APT_PROXY}" /etc/lxc/common.conf
+
+    # reload lxc config
+    service lxc reload
+  fi
+
+  # if apt-cacher-ng is running
+  if service apt-cacher-ng status > /dev/null 2>&1; then
+    # restart it to take hold of new config
+    service apt-cacher-ng restart
+  fi
+fi

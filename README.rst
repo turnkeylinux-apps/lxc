@@ -39,7 +39,7 @@ top of that:
     - Preconfigured network NAT bridge interface (natbr0).
     - Preconfigured dnsmasq on natbr0 providing DHCP and DNS services.
       Containers can be referenced by hostname or hostname.local.lxc
-    - Includes apt-cacher-ng, binding to natbr0 interface.
+    - Includes apt-cacher-ng, binding to br0 interface.
     - Includes TurnKey web control panel (convenience).
     - Includes example inithooks configuration for preseeding (convenience).
     - IP forwarding and control groups enabled.

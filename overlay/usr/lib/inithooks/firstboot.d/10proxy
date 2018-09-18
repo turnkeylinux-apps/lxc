@@ -1,0 +1,15 @@
+#!/bin/bash -e
+# capture apt-proxy setting and save in root
+
+. /etc/default/inithooks
+
+[ -e $INITHOOKS_CONF ] && . $INITHOOKS_CONF
+
+CONF="/root/.bashrc.d/apt-proxy"
+
+if [ -n "${APT_PROXY}" ]; then
+  mkdir -p /root/.bashrc.d
+  echo "# default proxy settings" > ${CONF} 
+  echo "export APT_PROXY=${APT_PROXY}" >> ${CONF}
+  chmod +x ${CONF}
+fi

@@ -1,4 +1,8 @@
-#!/bin/bash 
+#!/bin/bash
+# Wrapper for /usr/bin/lxc-destroy
+#
+# Cleanup dhcp leases and other resources when container is destroyed
+#
 # Author: Anton Pyrogovskyi <anton@turnkeylinux.org>
 
 ARGV=$@
@@ -7,7 +11,6 @@ info() { echo "INFO: $@"; }
 fatal() { echo "FATAL: $@" 1>&2; exit 1; }
 
 name=
-conf=
 
 while [[ -n $1 ]]; do
     case "$1" in
@@ -18,20 +21,16 @@ done
 
 [[ "$name" == "" ]] && fatal "must provide container name [-n|--name]"
 
-conf="/var/lib/lxc/$name/config"
-
-ip=$( host "$name" | cut -d' ' -f4 )
-netlink=$( grep 'lxc\.network\.link' "$conf" | cut -d'=' -f2 | tr -d ' ' )
-mac=$( grep 'lxc\.network\.hwaddr' "$conf" | cut -d'=' -f2 | tr -d ' ' )
+# remove from DNS and release dhcp leases
+/usr/local/bin/lxc-dnsmasq-update --delete $name
 
 /usr/bin/lxc-destroy $ARGV
 
 if [[ $? -eq 0 ]]; then
-    if [[ "$netlink" == "natbr0" ]]; then
-        dhcp_release "$netlink" "$ip" "$mac"
-    fi
-
+    # remove nginx proxy, if any
     nginx-proxy -r -d all -n "$name"
+
+    # cleanup known hosts
     ssh-keygen -R "$name"  >/dev/null 2>&1
     ssh-keygen -R "$ip"    >/dev/null 2>&1
 

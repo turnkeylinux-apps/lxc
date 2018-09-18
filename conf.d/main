@@ -34,9 +34,12 @@ sed -i 's|^\(accept *= *\)1\(232[01]\)|\12\2|g' /etc/stunnel/stunnel.conf
 # allow nginx proxy to use container certs and keys
 sed -i "/^ssl_certificate.*/ d" /etc/nginx/include/ssl
 
-# configure apt-cacher-ng to bind to natbr0
+# configure apt-cacher-ng to bind to localhost initially
+#   note: this will be replaced by br0 when the interface comes up
 CONF=/etc/apt-cacher-ng/acng.conf
-sed -i "s|MainInterface|MainInterface\nBindAddress: 192.168.121.1|" $CONF
+sed -i "s|MainInterface|MainInterface\nBindAddress: localhost|" $CONF
+# pass through https urls
+sed -i "/bugs.debian.org:443/ a PassThroughPattern: .*" $CONF
 
 # disable stunnel and use nginx instead
 service stunnel4 stop

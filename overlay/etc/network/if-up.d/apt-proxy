@@ -1,0 +1,37 @@
+#!/bin/bash -e
+# get apt-proxy and configure /etc/apt/apt.conf.d/01proxy
+
+ENV="/proc/1/environ"
+
+get_proxy() {
+  # in container, get apt-proxy from root environment
+  APT_PROXY="$(cat ${ENV} | tr '\0' '\n' | tr -d '"' | awk -F= '/APT_PROXY/ { print $2 }')"
+}
+
+check_proxy() {
+  curl --head --connect-timeout 2 $1 > /dev/null 2>&1
+  [ $? == 0 ] && return 0 || return 1;
+}
+
+set_proxy() {
+  local CONF="/etc/apt/apt.conf.d/01proxy"
+  echo "Acquire::http::Proxy \"$1\";" > ${CONF}
+}
+
+if [ "$IFACE" = eth0 ]; then
+  # if $APT_PROXY set in environment, then use it and exit
+  if [ -n ${APT_PROXY} ]; then
+    if check_proxy "${APT_PROXY}"; then
+      set_proxy "${APT_PROXY}"; exit 0
+    fi
+  fi
+
+  # else get $APT_PROXY from container environment
+  if grep -qa 'container=lxc' ${ENV}; then
+    get_proxy
+    if check_proxy "${APT_PROXY}"; then
+      set_proxy "${APT_PROXY}"; exit 0
+    fi
+  fi
+fi
+exit 0
