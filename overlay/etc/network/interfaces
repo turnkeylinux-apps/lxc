@@ -1,3 +1,6 @@
+# UNCONFIGURED INTERFACES
+# remove the above line if you edit this file
+
 auto lo
 iface lo inet loopback
 
