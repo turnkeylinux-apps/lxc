@@ -100,7 +100,7 @@ traffic to the container based on a set of rules.
 Usage: nginx-proxy
 ''''''''''''''''''
 
-The current version of nginx-proxy supports the v14.x appliances and is
+The current version of nginx-proxy supports the v14.x & v15.x appliances and is
 decoupled from lxc so it can proxy any upstream vm or container. Options
 exist which make it easier to cleanup when containers are removed and to better
 support the Ansible appliance. Templates now use the Jinja2 style, although
@@ -270,9 +270,9 @@ Now we'll remove the container, wp2, we just created.
 Apt Caching Proxy
 -----------------
 
-The LXC appliance uses `apt-cacher-ng` listening on `port 3142` for a caching
+The LXC appliance uses ``apt-cacher-ng`` listening on ``port 3142`` for a caching
 proxy server.  All containers are now configured by default to use the internal
-cache (no longer necessary to include the `-x` option on the command line).
+cache (no longer necessary to include the ``-x`` option on the command line).
 
 In some circumstances, it is desirable to use an external apt proxy.  For example,
 a small development shop with several developer workstations, a TKLdev appliance
@@ -281,19 +281,19 @@ for various stages of development and production.  To conserve bandwidth, we wan
 to have all workstations and appliances share a common apt proxy.
 
 When an external apt proxy is available, the LXC appliance will continue to configure
-all containers to use the internal `apt-cacher-ng` cache which will now forward
+all containers to use the internal ``apt-cacher-ng`` cache which will now forward
 the request to the external apt proxy.  This can be configured in one of two ways.
 
-1. If you are using preseeding, you can add the `url` of the external apt cache
-   to the `inithooks.conf` file::
+1. If you are using pre-seeding, you can add the ``url`` of the external apt cache
+   to the ``inithooks.conf`` file::
 
     export APT_PROXY=http://[external_proxy_host_domain||external_proxy_ip]:[port]
 
-   Note that the `url` must be compatible with apt's proxy specification.
+   Note that the ``url`` must be compatible with ``apt``'s proxy specification.
 
-2. In all other cases, you can add the export line above to `/root/.bashrc.d/apt-proxy`
+2. In all other cases, you can add the export line above to ``/root/.bashrc.d/apt-proxy``
    and then restart the appliance.  You can use this method if you forgot to
-   preseed, or if you want to change the external apt cache.
+   pre-seed, or if you want to change the external apt cache.
 
 
 .. _inithooks: https://www.turnkeylinux.org/docs/inithooks

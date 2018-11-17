@@ -8,12 +8,26 @@ containers while handling tricky details such as network routing.
 virtualization technology that powers Docker and other next generation
 software deployment platforms.
 
+Usage
+-----
+
+Creating a TurnKey LXC container is done by specifying ``turnkey`` as
+the template when invoking ``lxc-create``, for example::
+
+    # lxc-create -n CONTAINER_NAME -f CONFIG_FILE -t turnkey
+
+See the `Usage Documentation`_ for further details.
+
+Features
+--------
+
 This appliance includes all the standard features in `TurnKey Core`_, and on
 top of that:
 
 - Includes `TurnKey LXC template`_:
 
     - Download and create a container of any TurnKey appliance.
+    - Appliance version defaults to ``latest available``.
     - Insert specified inithooks.conf into container for preseeding.
     - Supports configuration of network link (e.g., br0, natbr0, none).
     - Supports configuration of apt proxy.
@@ -50,8 +64,6 @@ top of that:
       without additional configuration. This mode is not recommended for
       production systems because of security concerns.
 
-See the `Usage documentation`_ for further details.
-
 Credentials *(passwords set at first boot)*
 -------------------------------------------
 
@@ -62,5 +74,5 @@ Credentials *(passwords set at first boot)*
 .. _TurnKey LXC template: https://github.com/turnkeylinux-apps/lxc/blob/master/overlay/usr/share/lxc/templates/lxc-turnkey
 .. _nginx-proxy: https://github.com/turnkeylinux-apps/lxc/blob/master/overlay/usr/local/bin/nginx-proxy
 .. _iptables-nat: https://github.com/turnkeylinux-apps/lxc/blob/master/overlay/usr/local/bin/iptables-nat
-.. _Usage documentation: https://github.com/turnkeylinux-apps/lxc/tree/master/docs
+.. _Usage Documentation: https://github.com/turnkeylinux-apps/lxc/tree/master/docs/usage.rst
 
