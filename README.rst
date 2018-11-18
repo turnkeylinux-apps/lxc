@@ -14,7 +14,7 @@ Usage
 Creating a TurnKey LXC container is done by specifying ``turnkey`` as
 the template when invoking ``lxc-create``, for example::
 
-    # lxc-create -n CONTAINER_NAME -f CONFIG_FILE -t turnkey
+    # lxc-create -n CONTAINER_NAME -f CONFIG_FILE -t turnkey -- APPNAME [template options]
 
 See the `Usage Documentation`_ for further details.
 
