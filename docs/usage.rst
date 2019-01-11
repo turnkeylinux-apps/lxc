@@ -39,6 +39,8 @@ the template. For example, to show the templates usage we could run::
 
         lxc-create -n core -f /etc/lxc/bridge.conf -t turnkey -- core -i /root/inithooks.conf
 
+.. note:: This document uses the domain **example.com** in accordance with IETF `RFC-2606`_. Please substitute a domain name appropriate for your local environment.
+
 Inithooks (preseeding)
 ----------------------
 
@@ -57,8 +59,7 @@ configuration for the TurnKey Wordpress appliance::
     export SEC_UPDATES=FORCE
     EOF
 
-Note, an example inithooks configuration is included in the TurnKey LXC
-appliance in the /root directory for convenience.
+.. note:: An example inithooks configuration is included in the TurnKey LXC appliance in the /root directory for convenience. Be sure to change the domain and passwords to suit your environment.
 
 Networking (bridged vs. NAT)
 ----------------------------
@@ -297,4 +298,5 @@ the request to the external apt proxy.  This can be configured in one of two way
 
 
 .. _inithooks: https://www.turnkeylinux.org/docs/inithooks
+.. _RFC-2606:   https://tools.ietf.org/html/rfc2606
 
