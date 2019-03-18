@@ -59,7 +59,9 @@ configuration for the TurnKey Wordpress appliance::
     export SEC_UPDATES=FORCE
     EOF
 
-If you wish to preseed static IP addresses for a `bridged` container, include the following lines in the `wp.inithooks.conf` file. ::
+By default, containers are configured to use the built-in ``apt-cacher-ng`` listening on ``port 3142`` for a caching proxy server.  See the section, Apt Caching Proxy, below for details on how to override the setting so containers use a different apt proxy.
+
+If you wish to preseed static IP addresses for a ``bridged`` container, include the following lines in the ``wp.inithooks.conf`` file. ::
 
     export IP_CONFIG=static
     export IP_ADDRESS=XX.XX.XX.XX     # your static ip
@@ -297,7 +299,7 @@ the request to the external apt proxy.  This can be configured in one of two way
 1. If you are using pre-seeding, you can add the ``url`` of the external apt cache
    to the ``inithooks.conf`` file::
 
-    export APT_PROXY=http://[external_proxy_host_domain||external_proxy_ip]:[port]
+    export APT_PROXY=http[s]://[external_proxy_host_domain||external_proxy_ip]:[port]
 
    Note that the ``url`` must be compatible with ``apt``'s proxy specification.
 

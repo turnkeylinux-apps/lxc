@@ -12,8 +12,9 @@ export HUB_APIKEY=SKIP
 export SEC_ALERTS=SKIP
 export SEC_UPDATES=FORCE
 
-# uncomment the following line to override default apt_proxy address
-#export APT_PROXY=PP.PP.PP.PP      # alternate apt_proxy address
+# uncomment the following line with appropriate url to override default apt_proxy address
+#export APT_PROXY=http[s]://[external_proxy_host_domain||external_proxy_ip]:[port]
+# note: the apt_proxy url must be compatible with apt's proxy specification
 
 # uncomment the following lines to specify static addressing
 #export IP_CONFIG=static           # select static mode
