@@ -48,7 +48,7 @@ An `inithooks`_ configuration must be specified in order to preseed the
 appliance on firstboot. For example, lets create an inithooks
 configuration for the TurnKey Wordpress appliance::
 
-    # cat > /root/inithooks.conf <<EOF
+    # cat > /root/wp.inithooks.conf <<EOF
     export ROOT_PASS=secretrootpass
     export DB_PASS=secretmysqlpass
     export APP_PASS=secretadminwppass
@@ -59,7 +59,16 @@ configuration for the TurnKey Wordpress appliance::
     export SEC_UPDATES=FORCE
     EOF
 
-.. note:: An example inithooks configuration is included in the TurnKey LXC appliance in the /root directory for convenience. Be sure to change the domain and passwords to suit your environment.
+If you wish to preseed static IP addresses for a `bridged` container, include the following lines in the `wp.inithooks.conf` file. ::
+
+    export IP_CONFIG=static
+    export IP_ADDRESS=XX.XX.XX.XX     # your static ip
+    export IP_NETMASK=255.255.255.0   # your netmask
+    export IP_GW=YY.YY.YY.YY          # your gateway address
+    #export IP_DNS1=DD.DD.DD.DD       # optional first dns server address
+    #export IP_DNS2=EE.EE.EE.EE       # optional second dns server address
+
+.. note:: An example inithooks configuration is included in the TurnKey LXC appliance in the /root directory for convenience. Be sure to change the domain, passwords, and addresses to suit your environment.  Uncomment the last two lines if you want to specify the optional domain name servers.
 
 Networking (bridged vs. NAT)
 ----------------------------
@@ -162,6 +171,7 @@ future versions. ::
 
 Usage: iptables-nat
 '''''''''''''''''''
+::
 
     Syntax: iptables-nat action s_port d_addr:d_port
     Add or delete iptables nat configurations
@@ -186,12 +196,11 @@ Wordpress container using the bridged network configuration.
 
 1. Create the container::
 
-    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress -i /root/inithooks.conf -v 15.0-stretch
+    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress -i /root/wp.inithooks.conf -v 15.0-stretch
 
-    This could have been shortened because -i|--inithooks now defaults to /root/inithooks.conf
-    and the version now defaults to `latest available`.:
+    This could have been shortened because the version now defaults to `latest available`.:
 
-    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress
+    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress -i /root/wp.inithooks.conf
 
 2. Start the container::
 
@@ -210,11 +219,11 @@ extra steps to expose the containers services to the network.
 
 1. Create the container::
 
-    # lxc-create -n wp2 -f /etc/lxc/natbridge.conf -t turnkey -- wordpress
+    # lxc-create -n wp2 -f /etc/lxc/natbridge.conf -t turnkey -- wordpress -i /root/wp.inithooks.conf
 
     This could have been shortened because natbridge.conf is the default config:
 
-    # lxc-create -n wp2 -t turnkey -- wordpress
+    # lxc-create -n wp2 -t turnkey -- wordpress -i /root/wp.inithooks.conf
 
 
 2. Start the container::
