@@ -3,11 +3,12 @@ turnkey-lxc-15.1 (1) turnkey; urgency=low
   * Enhancements
     - now compatible with ``confconsole``
     - updated documentation
+    [ John Carver - <dude4linux@gmail.com> ]
 
   * Note: Please refer to turnkey-core's changelog for changes common to all
     appliances. Here we only describe changes specific to this appliance.
 
- -- John Carver <dude4linux@gmail.com>  Sat, 17 Nov 2018 22:54:42 +0000
+ -- Jeremy Davis <jeremy@turnkeylinux.org>  Thu, 02 May 2019 14:45:08 +1000
 
 turnkey-lxc-15.0 (1) turnkey; urgency=low
 
