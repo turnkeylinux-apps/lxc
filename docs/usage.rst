@@ -4,7 +4,7 @@ Usage
 Creating a TurnKey LXC container is done by specifying ``turnkey`` as
 the template when invoking ``lxc-create``, for example::
 
-    # lxc-create -n CONTAINER_NAME -f CONFIG_FILE -t turnkey
+    # lxc-create -n CONTAINER_NAME -f CONFIG_FILE -t turnkey -- APPNAME [template options]
 
 The TurnKey LXC template has required and optional arguments.
 ``lxc-create`` will pass the arguments specified after a double dash to
@@ -39,6 +39,8 @@ the template. For example, to show the templates usage we could run::
 
         lxc-create -n core -f /etc/lxc/bridge.conf -t turnkey -- core -i /root/inithooks.conf
 
+.. note:: This document uses the domain **example.com** in accordance with IETF `RFC-2606`_. Please substitute a domain name appropriate for your local environment.
+
 Inithooks (preseeding)
 ----------------------
 
@@ -46,7 +48,7 @@ An `inithooks`_ configuration must be specified in order to preseed the
 appliance on firstboot. For example, lets create an inithooks
 configuration for the TurnKey Wordpress appliance::
 
-    # cat > /root/inithooks.conf <<EOF
+    # cat > /root/wp.inithooks.conf <<EOF
     export ROOT_PASS=secretrootpass
     export DB_PASS=secretmysqlpass
     export APP_PASS=secretadminwppass
@@ -57,8 +59,18 @@ configuration for the TurnKey Wordpress appliance::
     export SEC_UPDATES=FORCE
     EOF
 
-Note, an example inithooks configuration is included in the TurnKey LXC
-appliance in the /root directory for convenience.
+By default, containers are configured to use the built-in ``apt-cacher-ng`` listening on ``port 3142`` for a caching proxy server.  See the section, Apt Caching Proxy, below for details on how to override the setting so containers use a different apt proxy.
+
+If you wish to preseed static IP addresses for a ``bridged`` container, include the following lines in the ``wp.inithooks.conf`` file. ::
+
+    export IP_CONFIG=static
+    export IP_ADDRESS=XX.XX.XX.XX     # your static ip
+    export IP_NETMASK=255.255.255.0   # your netmask
+    export IP_GW=YY.YY.YY.YY          # your gateway address
+    #export IP_DNS1=DD.DD.DD.DD       # optional first dns server address
+    #export IP_DNS2=EE.EE.EE.EE       # optional second dns server address
+
+.. note:: An example inithooks configuration is included in the TurnKey LXC appliance in the /root directory for convenience. Be sure to change the domain, passwords, and addresses to suit your environment.  Uncomment the last two lines if you want to specify the optional domain name servers.
 
 Networking (bridged vs. NAT)
 ----------------------------
@@ -100,7 +112,7 @@ traffic to the container based on a set of rules.
 Usage: nginx-proxy
 ''''''''''''''''''
 
-The current version of nginx-proxy supports the v14.x appliances and is
+The current version of nginx-proxy supports the v14.x & v15.x appliances and is
 decoupled from lxc so it can proxy any upstream vm or container. Options
 exist which make it easier to cleanup when containers are removed and to better
 support the Ansible appliance. Templates now use the Jinja2 style, although
@@ -161,6 +173,7 @@ future versions. ::
 
 Usage: iptables-nat
 '''''''''''''''''''
+::
 
     Syntax: iptables-nat action s_port d_addr:d_port
     Add or delete iptables nat configurations
@@ -185,12 +198,11 @@ Wordpress container using the bridged network configuration.
 
 1. Create the container::
 
-    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress -i /root/inithooks.conf -v 15.0-stretch
+    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress -i /root/wp.inithooks.conf -v 15.0-stretch
 
-    This could have been shortened because -i|--inithooks now defaults to /root/inithooks.conf
-    and the version now defaults to `latest available`.:
+    This could have been shortened because the version now defaults to `latest available`.:
 
-    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress
+    # lxc-create -n wp1 -f /etc/lxc/bridged.conf -t turnkey -- wordpress -i /root/wp.inithooks.conf
 
 2. Start the container::
 
@@ -209,11 +221,11 @@ extra steps to expose the containers services to the network.
 
 1. Create the container::
 
-    # lxc-create -n wp2 -f /etc/lxc/natbridge.conf -t turnkey -- wordpress
+    # lxc-create -n wp2 -f /etc/lxc/natbridge.conf -t turnkey -- wordpress -i /root/wp.inithooks.conf
 
     This could have been shortened because natbridge.conf is the default config:
 
-    # lxc-create -n wp2 -t turnkey -- wordpress
+    # lxc-create -n wp2 -t turnkey -- wordpress -i /root/wp.inithooks.conf
 
 
 2. Start the container::
@@ -270,9 +282,9 @@ Now we'll remove the container, wp2, we just created.
 Apt Caching Proxy
 -----------------
 
-The LXC appliance uses `apt-cacher-ng` listening on `port 3142` for a caching
+The LXC appliance uses ``apt-cacher-ng`` listening on ``port 3142`` for a caching
 proxy server.  All containers are now configured by default to use the internal
-cache (no longer necessary to include the `-x` option on the command line).
+cache (no longer necessary to include the ``-x`` option on the command line).
 
 In some circumstances, it is desirable to use an external apt proxy.  For example,
 a small development shop with several developer workstations, a TKLdev appliance
@@ -281,20 +293,21 @@ for various stages of development and production.  To conserve bandwidth, we wan
 to have all workstations and appliances share a common apt proxy.
 
 When an external apt proxy is available, the LXC appliance will continue to configure
-all containers to use the internal `apt-cacher-ng` cache which will now forward
+all containers to use the internal ``apt-cacher-ng`` cache which will now forward
 the request to the external apt proxy.  This can be configured in one of two ways.
 
-1. If you are using preseeding, you can add the `url` of the external apt cache
-   to the `inithooks.conf` file::
+1. If you are using pre-seeding, you can add the ``url`` of the external apt cache
+   to the ``inithooks.conf`` file::
 
-    export APT_PROXY=http://[external_proxy_host_domain||external_proxy_ip]:[port]
+    export APT_PROXY=http[s]://[external_proxy_host_domain||external_proxy_ip]:[port]
 
-   Note that the `url` must be compatible with apt's proxy specification.
+   Note that the ``url`` must be compatible with ``apt``'s proxy specification.
 
-2. In all other cases, you can add the export line above to `/root/.bashrc.d/apt-proxy`
+2. In all other cases, you can add the export line above to ``/root/.bashrc.d/apt-proxy``
    and then restart the appliance.  You can use this method if you forgot to
-   preseed, or if you want to change the external apt cache.
+   pre-seed, or if you want to change the external apt cache.
 
 
 .. _inithooks: https://www.turnkeylinux.org/docs/inithooks
+.. _RFC-2606:   https://tools.ietf.org/html/rfc2606
 

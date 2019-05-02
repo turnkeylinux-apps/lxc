@@ -1,4 +1,5 @@
 # documentation: https://www.turnkeylinux.org/docs/inithooks
+# change the passwords, domains, and addresses before first use
 
 MASTERPASS=turnkey
 
@@ -10,4 +11,15 @@ export APP_DOMAIN=DEFAULT
 export HUB_APIKEY=SKIP
 export SEC_ALERTS=SKIP
 export SEC_UPDATES=FORCE
-#export APT_PROXY=
+
+# uncomment the following line with appropriate url to override default apt_proxy address
+#export APT_PROXY=http[s]://[external_proxy_host_domain||external_proxy_ip]:[port]
+# note: the apt_proxy url must be compatible with apt's proxy specification
+
+# uncomment the following lines to specify static addressing
+#export IP_CONFIG=static           # select static mode
+#export IP_ADDRESS=XX.XX.XX.XX     # static ip address
+#export IP_NETMASK=255.255.255.0   # static netmask
+#export IP_GW=YY.YY.YY.YY          # static gateway address
+#export IP_DNS1=DD.DD.DD.DD        # optional first dns server address
+#export IP_DNS2=EE.EE.EE.EE        # optional second dns server address

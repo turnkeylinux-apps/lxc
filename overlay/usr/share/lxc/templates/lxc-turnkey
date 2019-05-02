@@ -31,6 +31,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+# Usage:
+# This template is invoked by lxc-create with the --template [-t] option 'turnkey'
+#
+# Example:
+# lxc-create -n CONTAINER_NAME -f CONFIG_FILE -t turnkey -- APPNAME [template options]
+
 # Detect use under userns (unsupported)
 for arg in "$@"; do
     [ "$arg" = "--" ] && break
