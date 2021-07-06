@@ -702,13 +702,14 @@ case "${version}" in
     14.0*-wheezy)      fatal "turnkey version ${version} is no longer supported:";;
     14.[1-9]*-jessie)  deb_version="debian-8";;
     15.[0-9]*-stretch) deb_version="debian-9";;
+    16.[0-9]*-buster) deb_version="debian-10";;
                     *) fatal "turnkey version ${version} is not recognized:"
 esac
 
 tkl_version=$(echo ${version} | cut -d "-" -f 1)
 deb_release=$(echo ${version} | cut -d "-" -f 2)
 
-valid_releases=('wheezy' 'jessie' 'stretch')
+valid_releases=('wheezy' 'jessie' 'stretch' 'buster')
 if [[ ! "${valid_releases[*]}" =~ (^|[^[:alpha:]])${deb_release}([^[:alpha:]]|$) ]]; then
     echo "Invalid release ${deb_release}, valid ones are: ${valid_releases[*]}"
     exit 1
